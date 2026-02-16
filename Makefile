@@ -1,7 +1,9 @@
 # structure
 MAIN := fly_in.py
-ARGS ?= config.txt
+ARGS ?= 
+
 VENV := .venv
+VENV_STATE := $(VENV)/.install
 
 SRC_DIRS := .
 
@@ -20,18 +22,22 @@ PIP := $(PYTHON) -m pip
 POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
 # rules
-install: $(PYPROJECT_TOML) $(POETRY_LOCK) | $(PYTHON)
-	$(POETRY) install --with dev --no-root
+install: $(POETRY_LOCK) $(VENV_STATE) | $(PYTHON)
 
-run: install
-	@$(PYTHON) $(MAIN) $(ARGS)
+run: install | $(PYTHON)
+	$(PYTHON) $(MAIN) $(ARGS)
+
+$(POETRY_LOCK) $(VENV_STATE) &: $(PYPROJECT_TOML) | $(PYTHON)
+	@$(POETRY) lock
+	@$(POETRY) install --with dev --no-root
+	@touch $(POETRY_LOCK) $(VENV_STATE)
 
 clean:
 	rm -rf $(PYCACHES) $(MYPYCACHES)
 	rm -rf $(VENV)
 
 debug: install
-	@$(PYTHON) -m pdb $(MAIN) $(ARGS)
+	$(PYTHON) -m pdb $(MAIN) $(ARGS)
 
 lint: install
 	@$(FLAKE8)
@@ -45,11 +51,7 @@ lint-strict: install
 
 $(PYTHON):
 	@python3 -m venv $(VENV)
-	@$(PIP) install -U pip
-	@$(PIP) install -U poetry
-
-$(POETRY_LOCK): $(PYPROJECT_TOML) | $(PYTHON)
-	@$(POETRY) lock
+	@$(PIP) install -U pip poetry
 
 # miscellaneous
 .PHONY: install run debug lint lint-strict clean

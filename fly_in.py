@@ -1,3 +1,4 @@
+import argparse
 import logging
 import logging.config
 import os
@@ -40,6 +41,16 @@ LOGGING_CONFIG = {
 
 
 def main() -> None:
+    parser = argparse.ArgumentParser(
+        prog="FlyIn",
+        description="Design a system that efficiently routes a fleet of \
+                drones from a central base (start) to a target location (end)",
+        epilog="created by nlallema",
+    )
+
+    args = parser.parse_args()
+    print(args)
+
     logging.config.dictConfig(LOGGING_CONFIG)
 
     logger.debug("Initial debug")
