@@ -5,19 +5,22 @@ ARGS ?=
 VENV := .venv
 VENV_STATE := $(VENV)/.install
 
-SRC_DIRS := .
-
 POETRY_LOCK := poetry.lock
 PYPROJECT_TOML := pyproject.toml
 
-PYCACHES = $(addsuffix /__pycache__,$(SRC_DIRS))
-MYPYCACHES = $(addsuffix /.mypy_cache,$(SRC_DIRS))
-EXCLUDE = --exclude $(VENV)
+# cache
+CACHE_DIRS := __pycache__ .mypy_cache .pytest_cache
+CACHE_EXCLUDE = -name "$(VENV)" -prune -o
+CACHE_SEARCH = $(foreach cache,$(CACHE_DIRS),-name "$(cache)" -o)
+FIND_CACHES = find . \
+	$(CACHE_EXCLUDE) \
+	-type d \( $(CACHE_SEARCH) -false \) -print
 
 # tools
 PYTHON := $(VENV)/bin/python3
-FLAKE8 := $(PYTHON) -m flake8 $(EXCLUDE)
-MYPY := $(PYTHON) -m mypy $(EXCLUDE)
+FLAKE8 := $(PYTHON) -m flake8 --exclude $(VENV)
+MYPY := $(PYTHON) -m mypy --exclude $(VENV)
+PYTEST := $(PYTHON) -m pytest
 PIP := $(PYTHON) -m pip
 POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
@@ -33,7 +36,7 @@ $(POETRY_LOCK) $(VENV_STATE) &: $(PYPROJECT_TOML) | $(PYTHON)
 	@touch $(POETRY_LOCK) $(VENV_STATE)
 
 clean:
-	rm -rf $(PYCACHES) $(MYPYCACHES)
+	$(FIND_CACHES) -exec rm -rf {} + 1>/dev/null
 	rm -rf $(VENV)
 
 debug: install
@@ -48,6 +51,9 @@ lint: install
 lint-strict: install
 	@$(FLAKE8)
 	@$(MYPY) . --strict
+
+tests: install
+	@$(PYTEST)
 
 $(PYTHON):
 	@python3 -m venv $(VENV)
