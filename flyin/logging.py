@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import logging.config
 
-from srcs.arguments import Args
+from flyin.arguments import Args
 
 
 class LoggingSystem:
@@ -37,16 +37,17 @@ class LoggingSystem:
     @classmethod
     def global_setup(
         cls: type[LoggingSystem],
-        root_logger: logging.Logger,
         args: Args,
     ) -> None:
         level: int = cls._get_level(args.verbose)
 
         logging.config.dictConfig(LoggingSystem.CONFIG)
 
-        root_logger.setLevel(level)
-        for handler in root_logger.handlers:
-            handler.setLevel(level)
+        loggers = [
+            logging.getLogger(name) for name in logging.root.manager.loggerDict
+        ]
+        for logger in loggers:
+            logger.setLevel(level)
 
     @staticmethod
     def _get_level(verbose: int) -> int:

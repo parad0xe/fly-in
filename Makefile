@@ -1,3 +1,5 @@
+MAKEFLAGS=--no-print-directory
+
 # structure
 MAIN := fly_in.py
 ARGS ?= 
@@ -28,36 +30,43 @@ POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 install: $(POETRY_LOCK) $(VENV_STATE) | $(PYTHON)
 
 run: install | $(PYTHON)
-	$(PYTHON) $(MAIN) $(ARGS)
+	@echo "$(PYTHON) $(MAIN) $(ARGS)"
+	@$(PYTHON) $(MAIN) $(ARGS) || true
+	@$(MAKE) cache-clean
 
 $(POETRY_LOCK) $(VENV_STATE) &: $(PYPROJECT_TOML) | $(PYTHON)
 	@$(POETRY) lock
 	@$(POETRY) install --with dev --no-root
 	@touch $(POETRY_LOCK) $(VENV_STATE)
 
-clean:
-	$(FIND_CACHES) -exec rm -rf {} + 1>/dev/null
+cache-clean:
+	@$(FIND_CACHES) -exec rm -rf {} + 1>/dev/null
+
+clean: cache-clean
 	rm -rf $(VENV)
 
 debug: install
 	$(PYTHON) -m pdb $(MAIN) $(ARGS)
 
 lint: install
-	@$(FLAKE8)
-	@$(MYPY) . --check-untyped-defs \
+	@-$(FLAKE8)
+	@-$(MYPY) . --check-untyped-defs \
 	--warn-unused-ignores --ignore-missing-imports \
 	--warn-return-any --disallow-untyped-defs
+	@$(MAKE) cache-clean --no-print-directory
 
 lint-strict: install
-	@$(FLAKE8)
-	@$(MYPY) . --strict
+	@-$(FLAKE8)
+	@-$(MYPY) . --strict
+	@$(MAKE) cache-clean
 
 tests: install
-	@$(PYTEST)
+	@-$(PYTEST) 
+	@$(MAKE) cache-clean
 
 $(PYTHON):
 	@python3 -m venv $(VENV)
 	@$(PIP) install -U pip poetry
 
 # miscellaneous
-.PHONY: install run debug lint lint-strict clean
+.PHONY: install run debug lint lint-strict clean cache-clean tests

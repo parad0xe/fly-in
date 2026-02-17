@@ -4,6 +4,8 @@ import argparse
 import textwrap
 from dataclasses import dataclass
 
+from typing_extensions import Self
+
 
 @dataclass(frozen=True)
 class Args:
@@ -11,7 +13,7 @@ class Args:
     file: str
 
     @classmethod
-    def parse_arguments(cls: type[Args]) -> Args:
+    def parse_arguments(cls) -> Self:
         parser = argparse.ArgumentParser(
             prog="FlyIn",
             description=textwrap.dedent(
