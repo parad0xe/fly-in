@@ -1,0 +1,37 @@
+from pydantic import ValidationError
+
+from flyin.exceptions.base import FlyInError
+
+
+class LoaderError(FlyInError):
+    """Base class for all errors related to graph operations and integrity."""
+
+    default_message = "Failed to load the graph data."
+
+
+class LoaderFileNotFoundError(LoaderError):
+    """Raised when the target graph file does not exist on the filesystem."""
+
+    default_message = "The specified graph file was not found."
+
+
+class LoaderFilePermissionError(LoaderError):
+    """Raised when the application lacks permissions to access the file."""
+
+    default_message = "Permission denied for the specified graph file."
+
+
+class LoaderEmptyFileError(LoaderError):
+    """Raised when the provided graph file contains no data to parse."""
+
+    default_message = "The graph file is empty."
+
+
+class LoaderValidationError(LoaderError):
+    def __init__(self, e: ValidationError) -> None:
+        messages: list[str] = []
+
+        messages.append("")
+        for error in e.errors():
+            messages.append(f"- (field: '{error['loc'][0]}') {error['msg']}")
+        super().__init__("\n".join(messages))

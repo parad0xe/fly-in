@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from flyin.exceptions.hub import HubSelfConnectionError
+from flyin.exceptions.hub import HubDuplicateLinkError, HubSelfConnectionError
 from flyin.models.hub import Hub, HubColorType, HubZoneType
 from flyin.models.link import Link
 
@@ -10,6 +10,30 @@ from flyin.models.link import Link
 def valid_hub_data() -> dict:
     """Provide a dictionary of valid baseline attributes for a Hub instance."""
     return {"name": "DroneAlpha1", "x": 10, "y": 20}
+
+
+def test_hub_initializes_with_default_values(valid_hub_data):
+    """Verify default values for zone, drones, and max_drones capacity."""
+    hub = Hub(**valid_hub_data)
+    assert hub.zone == HubZoneType.NORMAL
+    assert hub.drones == 0
+    assert hub.max_drones == 1
+    assert hub.links == []
+    assert hub.is_leaf is True
+
+
+def test_hub_prevents_extra_fields(valid_hub_data):
+    """Ensure that providing unknown fields triggers a validation error."""
+    valid_hub_data["unknown_field"] = "data"
+    with pytest.raises(ValidationError):
+        Hub(**valid_hub_data)
+
+
+@pytest.mark.parametrize("field", ["drones", "max_drones"])
+def test_hub_prevents_negative_drone_counts(valid_hub_data, field):
+    """Verify that drone-related counts cannot be negative."""
+    with pytest.raises(ValidationError):
+        Hub(**{**valid_hub_data, field: -1})
 
 
 @pytest.mark.parametrize("zone", [None, *list(HubZoneType)])
@@ -27,10 +51,8 @@ def test_hub_instantiation_applies_specified_or_default_zones(
     assert hub.max_drones == 1
 
 
-def test_hub_supports_both_enum_color_assignment_and_null_color_value(
-    valid_hub_data,
-):
-    """Validate color attribute handling for Enum members and null values."""
+def test_hub_supports_enum_and_null_colors(valid_hub_data):
+    """Validate color handling for Enum members and null values."""
     hub = Hub(**valid_hub_data, color=HubColorType.BLUE)
     assert hub.color == HubColorType.BLUE
 
@@ -38,110 +60,123 @@ def test_hub_supports_both_enum_color_assignment_and_null_color_value(
     assert Hub(**valid_hub_data, color=None).color is None
 
 
-@pytest.mark.parametrize(
-    "invalid_name",
-    [
-        "",
-        "1Hub",
-        "_hub",
-        " hub",
-    ],
-)
-def test_hub_creation_fails_for_names_violating_naming_conventions(
-    valid_hub_data, invalid_name
-):
-    """
-    Ensure Hub rejection of names violating length or pattern constraints.
-    """
-    valid_hub_data["name"] = invalid_name
-    with pytest.raises(ValidationError) as excinfo:
+@pytest.mark.parametrize("name", ["", "1Hub", "_hub", " hub", "hub-a"])
+def test_hub_rejects_invalid_naming_patterns(valid_hub_data, name):
+    """Ensure hub names follow the required alphanumeric pattern."""
+    valid_hub_data["name"] = name
+    with pytest.raises(ValidationError):
         Hub(**valid_hub_data)
 
-    assert "name" in str(excinfo.value)
+
+def test_hub_connect_to_registers_link(valid_hub_data):
+    """Confirm the connect_to method correctly updates the links list."""
+    hub_a = Hub(**valid_hub_data)
+    hub_b = Hub(name="DroneBeta", x=30, y=40)
+    link = Link(max_link_capacity=5)
+
+    hub_a.connect_to(hub_b, link)
+
+    assert len(hub_a.links) == 1
+    assert hub_a.links[0] == (hub_b, link)
+    assert len(hub_b.links) == 0
 
 
-@pytest.mark.parametrize("invalid_max", [-1, -200])
-def test_hub_prevents_negative_values_for_maximum_drone_capacity(
-    valid_hub_data, invalid_max
-):
-    """
-    Verify that non-positive drone capacity values trigger validation errors.
-    """
-    with pytest.raises(ValidationError):
-        Hub(**valid_hub_data, max_drones=invalid_max)
+def test_hub_prevents_self_connection_on_instantiation(valid_hub_data):
+    """Ensure self-connection is blocked during object creation."""
+    hub_a = Hub(**valid_hub_data)
+    with pytest.raises(HubSelfConnectionError):
+        Hub(**valid_hub_data, links=[(hub_a, Link())])
 
 
-def test_hub_automatically_converts_numeric_strings_to_integers(
-    valid_hub_data,
-):
-    """
-    Confirm Pydantic automatic conversion of compatible types to integers.
-    """
+def test_hub_connect_both_registers_mutual_links(valid_hub_data):
+    """Verify connect_both establishes a bidirectional connection."""
+    hub_a = Hub(**valid_hub_data)
+    hub_b = Hub(name="DroneBeta", x=30, y=40)
+    link = Link()
+
+    hub_a.connect_both(hub_b, link)
+
+    assert (hub_b, link) in hub_a.links
+    assert (hub_a, link) in hub_b.links
+
+
+def test_hub_add_link_prevents_self_connection(valid_hub_data):
+    """Ensure the add_link method blocks connection to itself."""
+    hub_a = Hub(**valid_hub_data)
+    with pytest.raises(HubSelfConnectionError):
+        hub_a.connect_to(hub_a, Link())
+
+
+def test_hub_prevents_duplicate_links(valid_hub_data):
+    """Ensure duplicate connections between hubs are prohibited."""
+    hub_a = Hub(**valid_hub_data)
+    hub_b = Hub(name="Beta", x=30, y=40)
+    link = Link()
+    hub_a.links = [(hub_b, link), (hub_b, link)]
+    with pytest.raises(HubDuplicateLinkError):
+        hub_a.ensure_integrity()
+
+    hub_a = Hub(**valid_hub_data)
+    hub_b = Hub(name="Beta", x=30, y=40)
+    link_1 = Link()
+    link_2 = Link()
+    hub_a.links = [(hub_b, link_1), (hub_b, link_2)]
+    with pytest.raises(HubDuplicateLinkError):
+        hub_a.ensure_integrity()
+
+
+def test_hub_connect_to_prevents_duplicates(valid_hub_data):
+    """Ensure connect_to prevents creating redundant mutual connections."""
+    hub_a = Hub(**valid_hub_data)
+    hub_b = Hub(name="Beta", x=30, y=40)
+    link = Link()
+
+    hub_a.connect_to(hub_b, link)
+
+    with pytest.raises(HubDuplicateLinkError):
+        hub_a.connect_to(hub_b, link)
+
+
+def test_hub_connect_both_prevents_duplicates(valid_hub_data):
+    """Ensure connect_both prevents creating redundant mutual connections."""
+    hub_a = Hub(**valid_hub_data)
+    hub_b = Hub(name="Beta", x=30, y=40)
+    link = Link()
+
+    hub_a.connect_both(hub_b, link)
+
+    with pytest.raises(HubDuplicateLinkError):
+        hub_b.connect_both(hub_a, link)
+
+
+def test_hub_updates_leaf_status(valid_hub_data):
+    """Verify is_leaf becomes False when more than one links exist."""
+    hub = Hub(**valid_hub_data)
+    assert hub.is_leaf is True
+
+    hubs = [Hub(name=f"Hub{i}", x=i, y=i) for i in range(3)]
+
+    hub.connect_to(hubs[0], Link())
+    assert hub.is_leaf is True
+    assert hubs[0].is_leaf is True
+
+    hub.connect_to(hubs[1], Link())
+    assert hub.is_leaf is False
+    assert hubs[0].is_leaf is True
+    assert hubs[1].is_leaf is True
+
+    hubs[0].connect_both(hubs[2], Link())
+    assert hubs[0].is_leaf is True
+    assert hubs[2].is_leaf is True
+
+    hubs[0].connect_to(hubs[1], Link())
+    assert hubs[0].is_leaf is False
+    assert hubs[1].is_leaf is True
+
+
+def test_hub_automatically_converts_numeric_strings(valid_hub_data):
+    """Confirm Pydantic conversion of numeric strings to integers."""
     data = {**valid_hub_data, "x": "10", "y": "20"}
     hub = Hub(**data)  # type: ignore
     assert isinstance(hub.x, int)
     assert hub.x == 10
-
-
-def test_hub_initializes_with_an_empty_links_list_by_default(valid_hub_data):
-    """
-    Verify that the links collection is
-        initialized as an empty list by default.
-    """
-    hub = Hub(**valid_hub_data)
-    assert hub.links == []
-    assert isinstance(hub.links, list)
-
-
-def test_hub_successfully_registers_valid_peer_hub_connections(valid_hub_data):
-    """
-    Confirm successful registration of a peer connection
-        between two distinct hub instances.
-    """
-    hub_a = Hub(**valid_hub_data)
-    hub_b = Hub(name="DroneBeta", x=30, y=40)
-
-    hub_a.links.append((hub_b, Link()))
-
-    assert len(hub_a.links) == 1
-    target_hub, connection = hub_a.links[0]
-    assert target_hub.name == "DroneBeta"
-    assert connection.max_link_capacity == 1
-
-
-def test_hub_validates_strict_structural_types_for_link_entries(
-    valid_hub_data,
-):
-    """
-    Ensure that malformed data structures within the
-        links list trigger validation failures.
-    """
-    with pytest.raises(ValidationError):
-        Hub(
-            **valid_hub_data,
-            links=[("pas_un_hub", "pas_un_link")],  # type: ignore
-        )
-
-    valid_hub = Hub(**valid_hub_data)
-    valid_hub.name = "Hub_valid"
-    with pytest.raises(ValidationError):
-        Hub(
-            **valid_hub_data,
-            links=[(valid_hub, "pas_un_link")],  # type: ignore
-        )
-
-    with pytest.raises(ValidationError):
-        Hub(
-            **valid_hub_data,
-            links=[("invalid_hub", Link())],  # type: ignore
-        )
-
-
-def test_hub_prevents_self_connection_within_the_links_collection(
-    valid_hub_data,
-):
-    """Verify that a hub cannot be registered as its own peer in links."""
-    hub_a = Hub(**valid_hub_data)
-
-    with pytest.raises(HubSelfConnectionError):
-        Hub(**valid_hub_data, links=[(hub_a, Link())])

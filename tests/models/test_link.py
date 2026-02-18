@@ -4,32 +4,35 @@ from pydantic import ValidationError
 from flyin.models.link import Link
 
 
-@pytest.mark.parametrize(
-    "max_link_capacity",
-    [1, 1506486106840656004],
-)
-def test_link_initialization_sets_attributes_correctly_given_valid_input(
-    max_link_capacity,
-):
-    """Verify that a valid link can be created."""
-    link = Link(max_link_capacity=max_link_capacity)
-    assert link.max_link_capacity == max_link_capacity
-
-
-def test_link_capacity_defaults_to_one_when_not_specified():
-    """Ensure the default link capacity is set to 1."""
+def test_link_initializes_with_default_values():
+    """Verify that a Link starts with zero drones and capacity of one."""
     link = Link()
+    assert link.drones == 0
     assert link.max_link_capacity == 1
 
 
-@pytest.mark.parametrize("capacity", [-1, -100])
-def test_link_enforces_non_negative_capacity_constraint(capacity):
-    """Ensure that negative link capacities are rejected."""
+@pytest.mark.parametrize("field", ["drones", "max_link_capacity"])
+def test_link_prevents_negative_values(field):
+    """Ensure that drone count and capacity cannot be negative."""
     with pytest.raises(ValidationError):
-        Link(max_link_capacity=capacity)
+        Link(**{field: -1})
 
 
-def test_link_accepts_exactly_zero_as_minimum_capacity():
-    """Confirm that a capacity of zero is valid according to ge=0."""
-    link = Link(max_link_capacity=0)
-    assert link.max_link_capacity == 0
+def test_link_forbids_extra_fields():
+    """Confirm that unknown attributes trigger a validation error."""
+    with pytest.raises(ValidationError):
+        Link(unknown_field="invalid")  # type: ignore
+
+
+@pytest.mark.parametrize("capacity", [0, 100])
+def test_link_accepts_valid_capacities(capacity):
+    """Confirm that valid non-negative integers are accepted."""
+    link = Link(max_link_capacity=capacity)
+    assert link.max_link_capacity == capacity
+
+
+def test_link_coerces_strings_to_integers():
+    """Verify that Pydantic converts numeric strings to integers."""
+    link = Link(drones="5", max_link_capacity="10")  # type: ignore
+    assert isinstance(link.drones, int)
+    assert link.max_link_capacity == 10

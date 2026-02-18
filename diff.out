@@ -1,0 +1,762 @@
+diff --git a/fly_in.py b/fly_in.py
+index ad333fa..ba63022 100644
+--- a/fly_in.py
++++ b/fly_in.py
+@@ -1,9 +1,13 @@
+ import logging
+ 
++from rich.console import Console
++from rich.table import Table
++
+ from flyin.arguments import Args
+ from flyin.exceptions.base import FlyInError
++from flyin.io.file_loader import GraphFileLoader
+ from flyin.logging import LoggingSystem
+-from flyin.models.graph import GraphLoader
++from flyin.models.graph import Graph
+ 
+ logger: logging.Logger = logging.getLogger(__name__)
+ 
+@@ -17,17 +21,55 @@ def main() -> None:
+     # validate data from file
+     # create graph
+     try:
+-        _ = GraphLoader.load(args.file)
++        graph = GraphFileLoader.load(args.file)
+     except FlyInError as e:
+         logger.exception(e)
+         exit(1)
+     except Exception as e:
+         logger.exception(e)
+         exit(2)
++
++    print_graph_summary(graph)
+     # render graph
+     # update graph (+render graph)
+     # create solutions
+ 
+ 
++def print_graph_summary(graph: Graph):
++    """Display the graph structure and metadata in a terminal table."""
++    console = Console()
++
++    # Information générale sur les points d'entrée/sortie
++    console.print(f"[bold green]Start Hub:[/] {graph.start_hub.name}")
++    console.print(f"[bold red]End Hub:[/] {graph.end_hub.name}\n")
++
++    table = Table(
++        title="Network Nodes", show_header=True, header_style="bold cyan"
++    )
++    table.add_column("Hub")
++    table.add_column("Pos (X,Y)")
++    table.add_column("Type")
++    table.add_column("Connections")
++
++    for hub in graph.hubs:
++        # Formatage des connexions : 'Voisin (Capacité)'
++        conns = ", ".join(
++            [
++                f"{hub.name} <-> {peer.name} (drone: {link.drones}) (max: {link.max_link_capacity})"
++                for peer, link in hub.links
++            ]
++        )
++
++        node_type = "Leaf" if hub.is_leaf else "Node"
++        table.add_row(
++            f"{hub.name} (drones: {hub.drones}) (max: {hub.max_drones})",
++            f"{hub.x},{hub.y}",
++            node_type,
++            conns,
++        )
++
++    console.print(table)
++
++
+ if __name__ == "__main__":
+     main()
+diff --git a/flyin/models/graph.py b/flyin/models/graph.py
+index ec0cbe1..3f1b311 100644
+--- a/flyin/models/graph.py
++++ b/flyin/models/graph.py
+@@ -1,139 +1,15 @@
+ from __future__ import annotations
+ 
+-import logging
++from pydantic import BaseModel, ConfigDict
+ 
+-from pydantic import BaseModel
+-
+-from flyin.exceptions.graph import (
+-    GraphEmptyFileError,
+-    GraphFileNotFoundError,
+-    GraphFilePermissionError,
+-    GraphLoadError,
+-    GraphParseError,
+-)
+ from flyin.models.hub import Hub
+ from flyin.models.link import Link
+ 
+-logger: logging.Logger = logging.getLogger(__name__)
+-
+ 
+ class Graph(BaseModel):
++    model_config = ConfigDict(extra="forbid", frozen=True)
++
+     hubs: list[Hub]
+     links: list[Link]
+     start_hub: Hub
+     end_hub: Hub
+-
+-
+-class GraphLoader:
+-    KV_SEPARATOR = ":"
+-    METADATA_SEPARATOR = "="
+-
+-    @classmethod
+-    def load(cls, file: str) -> Graph:
+-        logger.debug(f"loading graph from file.. {file}")
+-
+-        loader = cls()
+-        graph_data = loader._parse_file(file)
+-
+-        return Graph(**graph_data)
+-
+-    def _parse_file(self, file: str) -> dict:
+-        self.nb_drones: str | None = None
+-        self.hubs: list[Hub] = []
+-        self.links: list[Link] = []
+-        self.start_hub: Hub
+-        self.end_hub: Hub
+-
+-        self.line_index: int = 0
+-        self.nb_drones_loaded: bool = False
+-
+-        try:
+-            with open(file) as f:
+-                for line in f:
+-                    self.line_index += 1
+-                    line = line.strip()
+-
+-                    if line == "":
+-                        continue
+-
+-                    if line.startswith("#"):
+-                        continue
+-                    try:
+-                        self._parse_line(line)
+-                    except GraphParseError as e:
+-                        raise e
+-        except FileNotFoundError as e:
+-            raise GraphFileNotFoundError() from e
+-        except PermissionError as e:
+-            raise GraphFilePermissionError() from e
+-        except OSError as e:
+-            raise GraphLoadError() from e
+-
+-        if self.line_index == 0:
+-            raise GraphEmptyFileError()
+-
+-        return {
+-            "hubs": self.hubs,
+-            "links": self.links,
+-            "start_hub": self.start_hub,
+-            "end_hub": self.end_hub,
+-        }
+-
+-    def _parse_line(self, line: str) -> None:
+-        if self.KV_SEPARATOR not in line:
+-            raise GraphParseError(
+-                self.line_index, f"Missing separator '{self.KV_SEPARATOR}'"
+-            )
+-
+-        key, value = [s.strip() for s in line.split(self.KV_SEPARATOR, 1)]
+-        logger.debug(f"parse: key=<{key}> value=<{value}>")
+-
+-        if not self.nb_drones_loaded and key != "nb_drones":
+-            raise GraphParseError(
+-                self.line_index,
+-                "Key 'nb_drones' must be declared at the first line",
+-            )
+-
+-        match key:
+-            case "nb_drones":
+-                self.nb_drones = value
+-                self.nb_drones_loaded = True
+-            case "start_hub":
+-                self._parse_hub(value)
+-            case "hub":
+-                self._parse_hub(value)
+-            case "end_hub":
+-                self._parse_hub(value)
+-            case _:
+-                raise GraphParseError(
+-                    self.line_index,
+-                    f"Unknow key: '{key}'",
+-                )
+-
+-    def _parse_hub(self, value) -> Hub:
+-        parts: list[str] = value.split()
+-
+-        if len(parts) < 3:
+-            raise GraphParseError(self.line_index, "Hub requires: name x y")
+-
+-        payload: dict = {
+-            "name": parts[0],
+-            "x": parts[1],
+-            "y": parts[2],
+-        }
+-
+-        for metadata in list(map(lambda x: x.strip("[]"), parts[3:])):
+-            if self.METADATA_SEPARATOR in metadata:
+-                metadata_key, metadata_value = metadata.split(
+-                    self.METADATA_SEPARATOR, 1
+-                )
+-                payload[metadata_key] = metadata_value
+-            else:
+-                raise GraphParseError(
+-                    self.line_index,
+-                    "Metadata requires: [key1=value key2=value2]",
+-                )
+-
+-        hub = Hub.model_validate(payload)
+-        logger.debug(f"hub created: Hub({hub})")
+-        return hub
+diff --git a/flyin/models/hub.py b/flyin/models/hub.py
+index 874bca6..280a036 100644
+--- a/flyin/models/hub.py
++++ b/flyin/models/hub.py
+@@ -1,11 +1,13 @@
+ from __future__ import annotations
+ 
++from collections import Counter
+ from enum import Enum
++from typing import Any
+ 
+-from pydantic import BaseModel, Field, model_validator
++from pydantic import BaseModel, ConfigDict, Field
+ from typing_extensions import Self
+ 
+-from flyin.exceptions.hub import HubSelfConnectionError
++from flyin.exceptions.hub import HubDuplicateLinkError, HubSelfConnectionError
+ from flyin.models.link import Link
+ 
+ 
+@@ -16,6 +18,17 @@ class HubColorType(str, Enum):
+     BLUE = "blue"
+     GREEN = "green"
+     GRAY = "gray"
++    YELLOW = "yellow"
++    ORANGE = "orange"
++    PURPLE = "purple"
++    BLACK = "black"
++    BROWN = "brown"
++    MAROON = "maroon"
++    GOLD = "gold"
++    DARKRED = "darkred"
++    VIOLET = "violet"
++    CRIMSON = "crimson"
++    rainbow = "rainbow"
+ 
+ 
+ class HubZoneType(str, Enum):
+@@ -43,23 +56,52 @@ class Hub(BaseModel):
+         operational constraints and peer connections.
+     """
+ 
++    model_config = ConfigDict(extra="forbid")
++
+     name: str = Field(min_length=1, pattern=r"^[a-zA-Z]\w*$")
+     x: int
+     y: int
+ 
+     zone: HubZoneType = HubZoneType.NORMAL
+     color: HubColorType | None = None
++    drones: int = Field(default=0, ge=0)
+     max_drones: int = Field(default=1, ge=0)
+ 
++    is_leaf: bool = True
++
+     links: list[tuple[Hub, Link]] = Field(default_factory=lambda: [])
+ 
+-    @model_validator(mode="after")
+-    def validate_link_integrity(self) -> Self:
++    def model_post_init(self, context: Any) -> None:
++        self.ensure_integrity()
++        return super().model_post_init(context)
++
++    def ensure_integrity(self) -> Self:
+         """
+         Ensure all peer connections are logically
+             consistent and prevent self-linking.
+         """
++        hub_names = [hub.name for hub, _ in self.links]
++        hub_name_counts = Counter(hub_names)
++
++        for name, count in hub_name_counts.items():
++            if count > 1:
++                raise HubDuplicateLinkError(self.name, name)
++
+         for hub, _ in self.links:
+             if hub.name == self.name:
+                 raise HubSelfConnectionError()
++
++        if len(self.links) > 1:
++            self.is_leaf = False
++        else:
++            self.is_leaf = True
++
+         return self
++
++    def connect_to(self, hub: Hub, link: Link) -> None:
++        self.links.append((hub, link))
++        self.ensure_integrity()
++
++    def connect_both(self, hub: Hub, link: Link) -> None:
++        self.connect_to(hub, link)
++        hub.connect_to(self, link)
+diff --git a/flyin/models/link.py b/flyin/models/link.py
+index 0df24f3..6ed0624 100644
+--- a/flyin/models/link.py
++++ b/flyin/models/link.py
+@@ -1,9 +1,12 @@
+ from __future__ import annotations
+ 
+-from pydantic import BaseModel, Field
++from pydantic import BaseModel, ConfigDict, Field
+ 
+ 
+ class Link(BaseModel):
+     """Represents a connection link with capacity constraints."""
+ 
+-    max_link_capacity: int = Field(default=1, ge=0)
++    model_config = ConfigDict(extra="forbid")
++
++    drones: int = Field(default=0, ge=0)
++    max_link_capacity: int = Field(default=1, ge=0, frozen=True)
+diff --git a/poetry.lock b/poetry.lock
+index 1558c7e..f4dbff0 100644
+--- a/poetry.lock
++++ b/poetry.lock
+@@ -174,6 +174,30 @@ files = [
+     {file = "librt-0.8.0.tar.gz", hash = "sha256:cb74cdcbc0103fc988e04e5c58b0b31e8e5dd2babb9182b6f9490488eb36324b"},
+ ]
+ 
++[[package]]
++name = "markdown-it-py"
++version = "4.0.0"
++description = "Python port of markdown-it. Markdown parsing, done right!"
++optional = false
++python-versions = ">=3.10"
++groups = ["dev"]
++files = [
++    {file = "markdown_it_py-4.0.0-py3-none-any.whl", hash = "sha256:87327c59b172c5011896038353a81343b6754500a08cd7a4973bb48c6d578147"},
++    {file = "markdown_it_py-4.0.0.tar.gz", hash = "sha256:cb0a2b4aa34f932c007117b194e945bd74e0ec24133ceb5bac59009cda1cb9f3"},
++]
++
++[package.dependencies]
++mdurl = ">=0.1,<1.0"
++
++[package.extras]
++benchmarking = ["psutil", "pytest", "pytest-benchmark"]
++compare = ["commonmark (>=0.9,<1.0)", "markdown (>=3.4,<4.0)", "markdown-it-pyrs", "mistletoe (>=1.0,<2.0)", "mistune (>=3.0,<4.0)", "panflute (>=2.3,<3.0)"]
++linkify = ["linkify-it-py (>=1,<3)"]
++plugins = ["mdit-py-plugins (>=0.5.0)"]
++profiling = ["gprof2dot"]
++rtd = ["ipykernel", "jupyter_sphinx", "mdit-py-plugins (>=0.5.0)", "myst-parser", "pyyaml", "sphinx", "sphinx-book-theme (>=1.0,<2.0)", "sphinx-copybutton", "sphinx-design"]
++testing = ["coverage", "pytest", "pytest-cov", "pytest-regressions", "requests"]
++
+ [[package]]
+ name = "mccabe"
+ version = "0.7.0"
+@@ -186,6 +210,18 @@ files = [
+     {file = "mccabe-0.7.0.tar.gz", hash = "sha256:348e0240c33b60bbdf4e523192ef919f28cb2c3d7d5c7794f74009290f236325"},
+ ]
+ 
++[[package]]
++name = "mdurl"
++version = "0.1.2"
++description = "Markdown URL utilities"
++optional = false
++python-versions = ">=3.7"
++groups = ["dev"]
++files = [
++    {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
++    {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
++]
++
+ [[package]]
+ name = "mypy"
+ version = "1.19.1"
+@@ -525,6 +561,25 @@ tomli = {version = ">=1", markers = "python_version < \"3.11\""}
+ [package.extras]
+ dev = ["argcomplete", "attrs (>=19.2)", "hypothesis (>=3.56)", "mock", "requests", "setuptools", "xmlschema"]
+ 
++[[package]]
++name = "rich"
++version = "14.3.2"
++description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
++optional = false
++python-versions = ">=3.8.0"
++groups = ["dev"]
++files = [
++    {file = "rich-14.3.2-py3-none-any.whl", hash = "sha256:08e67c3e90884651da3239ea668222d19bea7b589149d8014a21c633420dbb69"},
++    {file = "rich-14.3.2.tar.gz", hash = "sha256:e712f11c1a562a11843306f5ed999475f09ac31ffb64281f73ab29ffdda8b3b8"},
++]
++
++[package.dependencies]
++markdown-it-py = ">=2.2.0"
++pygments = ">=2.13.0,<3.0.0"
++
++[package.extras]
++jupyter = ["ipywidgets (>=7.5.1,<9)"]
++
+ [[package]]
+ name = "tomli"
+ version = "2.4.0"
+@@ -613,4 +668,4 @@ typing-extensions = ">=4.12.0"
+ [metadata]
+ lock-version = "2.1"
+ python-versions = ">=3.10"
+-content-hash = "0e41ef66dd1e28da0df4895dd248cceec136e191521001dc9f3fba652964ec2c"
++content-hash = "06f1125802df5cdf8e8080eac1a488e070c59f8cd3a717bcffaa7b8f5620bc5e"
+diff --git a/pyproject.toml b/pyproject.toml
+index 68fe6cf..c3e5aa6 100644
+--- a/pyproject.toml
++++ b/pyproject.toml
+@@ -14,6 +14,7 @@ optional = true
+ mypy = "1.19.1"
+ flake8 = "7.3.0"
+ pytest = "9.0.2"
++rich = "14.3.2"
+ 
+ [[tool.mypy.overrides]]
+ ignore_missing_imports = true
+diff --git a/tests/models/test_hub.py b/tests/models/test_hub.py
+index d0d6b39..53a658e 100644
+--- a/tests/models/test_hub.py
++++ b/tests/models/test_hub.py
+@@ -1,7 +1,7 @@
+ import pytest
+ from pydantic import ValidationError
+ 
+-from flyin.exceptions.hub import HubSelfConnectionError
++from flyin.exceptions.hub import HubDuplicateLinkError, HubSelfConnectionError
+ from flyin.models.hub import Hub, HubColorType, HubZoneType
+ from flyin.models.link import Link
+ 
+@@ -12,6 +12,30 @@ def valid_hub_data() -> dict:
+     return {"name": "DroneAlpha1", "x": 10, "y": 20}
+ 
+ 
++def test_hub_initializes_with_default_values(valid_hub_data):
++    """Verify default values for zone, drones, and max_drones capacity."""
++    hub = Hub(**valid_hub_data)
++    assert hub.zone == HubZoneType.NORMAL
++    assert hub.drones == 0
++    assert hub.max_drones == 1
++    assert hub.links == []
++    assert hub.is_leaf is True
++
++
++def test_hub_prevents_extra_fields(valid_hub_data):
++    """Ensure that providing unknown fields triggers a validation error."""
++    valid_hub_data["unknown_field"] = "data"
++    with pytest.raises(ValidationError):
++        Hub(**valid_hub_data)
++
++
++@pytest.mark.parametrize("field", ["drones", "max_drones"])
++def test_hub_prevents_negative_drone_counts(valid_hub_data, field):
++    """Verify that drone-related counts cannot be negative."""
++    with pytest.raises(ValidationError):
++        Hub(**{**valid_hub_data, field: -1})
++
++
+ @pytest.mark.parametrize("zone", [None, *list(HubZoneType)])
+ def test_hub_instantiation_applies_specified_or_default_zones(
+     valid_hub_data, zone
+@@ -27,10 +51,8 @@ def test_hub_instantiation_applies_specified_or_default_zones(
+     assert hub.max_drones == 1
+ 
+ 
+-def test_hub_supports_both_enum_color_assignment_and_null_color_value(
+-    valid_hub_data,
+-):
+-    """Validate color attribute handling for Enum members and null values."""
++def test_hub_supports_enum_and_null_colors(valid_hub_data):
++    """Validate color handling for Enum members and null values."""
+     hub = Hub(**valid_hub_data, color=HubColorType.BLUE)
+     assert hub.color == HubColorType.BLUE
+ 
+@@ -38,110 +60,123 @@ def test_hub_supports_both_enum_color_assignment_and_null_color_value(
+     assert Hub(**valid_hub_data, color=None).color is None
+ 
+ 
+-@pytest.mark.parametrize(
+-    "invalid_name",
+-    [
+-        "",
+-        "1Hub",
+-        "_hub",
+-        " hub",
+-    ],
+-)
+-def test_hub_creation_fails_for_names_violating_naming_conventions(
+-    valid_hub_data, invalid_name
+-):
+-    """
+-    Ensure Hub rejection of names violating length or pattern constraints.
+-    """
+-    valid_hub_data["name"] = invalid_name
+-    with pytest.raises(ValidationError) as excinfo:
++@pytest.mark.parametrize("name", ["", "1Hub", "_hub", " hub", "hub-a"])
++def test_hub_rejects_invalid_naming_patterns(valid_hub_data, name):
++    """Ensure hub names follow the required alphanumeric pattern."""
++    valid_hub_data["name"] = name
++    with pytest.raises(ValidationError):
+         Hub(**valid_hub_data)
+ 
+-    assert "name" in str(excinfo.value)
+-
+ 
+-@pytest.mark.parametrize("invalid_max", [-1, -200])
+-def test_hub_prevents_negative_values_for_maximum_drone_capacity(
+-    valid_hub_data, invalid_max
+-):
+-    """
+-    Verify that non-positive drone capacity values trigger validation errors.
+-    """
+-    with pytest.raises(ValidationError):
+-        Hub(**valid_hub_data, max_drones=invalid_max)
++def test_hub_connect_to_registers_link(valid_hub_data):
++    """Confirm the connect_to method correctly updates the links list."""
++    hub_a = Hub(**valid_hub_data)
++    hub_b = Hub(name="DroneBeta", x=30, y=40)
++    link = Link(max_link_capacity=5)
+ 
++    hub_a.connect_to(hub_b, link)
+ 
+-def test_hub_automatically_converts_numeric_strings_to_integers(
+-    valid_hub_data,
+-):
+-    """
+-    Confirm Pydantic automatic conversion of compatible types to integers.
+-    """
+-    data = {**valid_hub_data, "x": "10", "y": "20"}
+-    hub = Hub(**data)  # type: ignore
+-    assert isinstance(hub.x, int)
+-    assert hub.x == 10
++    assert len(hub_a.links) == 1
++    assert hub_a.links[0] == (hub_b, link)
++    assert len(hub_b.links) == 0
+ 
+ 
+-def test_hub_initializes_with_an_empty_links_list_by_default(valid_hub_data):
+-    """
+-    Verify that the links collection is
+-        initialized as an empty list by default.
+-    """
+-    hub = Hub(**valid_hub_data)
+-    assert hub.links == []
+-    assert isinstance(hub.links, list)
++def test_hub_prevents_self_connection_on_instantiation(valid_hub_data):
++    """Ensure self-connection is blocked during object creation."""
++    hub_a = Hub(**valid_hub_data)
++    with pytest.raises(HubSelfConnectionError):
++        Hub(**valid_hub_data, links=[(hub_a, Link())])
+ 
+ 
+-def test_hub_successfully_registers_valid_peer_hub_connections(valid_hub_data):
+-    """
+-    Confirm successful registration of a peer connection
+-        between two distinct hub instances.
+-    """
++def test_hub_connect_both_registers_mutual_links(valid_hub_data):
++    """Verify connect_both establishes a bidirectional connection."""
+     hub_a = Hub(**valid_hub_data)
+     hub_b = Hub(name="DroneBeta", x=30, y=40)
++    link = Link()
+ 
+-    hub_a.links.append((hub_b, Link()))
++    hub_a.connect_both(hub_b, link)
+ 
+-    assert len(hub_a.links) == 1
+-    target_hub, connection = hub_a.links[0]
+-    assert target_hub.name == "DroneBeta"
+-    assert connection.max_link_capacity == 1
++    assert (hub_b, link) in hub_a.links
++    assert (hub_a, link) in hub_b.links
+ 
+ 
+-def test_hub_validates_strict_structural_types_for_link_entries(
+-    valid_hub_data,
+-):
+-    """
+-    Ensure that malformed data structures within the
+-        links list trigger validation failures.
+-    """
+-    with pytest.raises(ValidationError):
+-        Hub(
+-            **valid_hub_data,
+-            links=[("pas_un_hub", "pas_un_link")],  # type: ignore
+-        )
++def test_hub_add_link_prevents_self_connection(valid_hub_data):
++    """Ensure the add_link method blocks connection to itself."""
++    hub_a = Hub(**valid_hub_data)
++    with pytest.raises(HubSelfConnectionError):
++        hub_a.connect_to(hub_a, Link())
+ 
+-    valid_hub = Hub(**valid_hub_data)
+-    valid_hub.name = "Hub_valid"
+-    with pytest.raises(ValidationError):
+-        Hub(
+-            **valid_hub_data,
+-            links=[(valid_hub, "pas_un_link")],  # type: ignore
+-        )
+ 
+-    with pytest.raises(ValidationError):
+-        Hub(
+-            **valid_hub_data,
+-            links=[("invalid_hub", Link())],  # type: ignore
+-        )
++def test_hub_prevents_duplicate_links(valid_hub_data):
++    """Ensure duplicate connections between hubs are prohibited."""
++    hub_a = Hub(**valid_hub_data)
++    hub_b = Hub(name="Beta", x=30, y=40)
++    link = Link()
++    hub_a.links = [(hub_b, link), (hub_b, link)]
++    with pytest.raises(HubDuplicateLinkError):
++        hub_a.ensure_integrity()
++
++    hub_a = Hub(**valid_hub_data)
++    hub_b = Hub(name="Beta", x=30, y=40)
++    link_1 = Link()
++    link_2 = Link()
++    hub_a.links = [(hub_b, link_1), (hub_b, link_2)]
++    with pytest.raises(HubDuplicateLinkError):
++        hub_a.ensure_integrity()
+ 
+ 
+-def test_hub_prevents_self_connection_within_the_links_collection(
+-    valid_hub_data,
+-):
+-    """Verify that a hub cannot be registered as its own peer in links."""
++def test_hub_connect_to_prevents_duplicates(valid_hub_data):
++    """Ensure connect_to prevents creating redundant mutual connections."""
+     hub_a = Hub(**valid_hub_data)
++    hub_b = Hub(name="Beta", x=30, y=40)
++    link = Link()
+ 
+-    with pytest.raises(HubSelfConnectionError):
+-        Hub(**valid_hub_data, links=[(hub_a, Link())])
++    hub_a.connect_to(hub_b, link)
++
++    with pytest.raises(HubDuplicateLinkError):
++        hub_a.connect_to(hub_b, link)
++
++
++def test_hub_connect_both_prevents_duplicates(valid_hub_data):
++    """Ensure connect_both prevents creating redundant mutual connections."""
++    hub_a = Hub(**valid_hub_data)
++    hub_b = Hub(name="Beta", x=30, y=40)
++    link = Link()
++
++    hub_a.connect_both(hub_b, link)
++
++    with pytest.raises(HubDuplicateLinkError):
++        hub_b.connect_both(hub_a, link)
++
++
++def test_hub_updates_leaf_status(valid_hub_data):
++    """Verify is_leaf becomes False when more than one links exist."""
++    hub = Hub(**valid_hub_data)
++    assert hub.is_leaf is True
++
++    hubs = [Hub(name=f"Hub{i}", x=i, y=i) for i in range(3)]
++
++    hub.connect_to(hubs[0], Link())
++    assert hub.is_leaf is True
++    assert hubs[0].is_leaf is True
++
++    hub.connect_to(hubs[1], Link())
++    assert hub.is_leaf is False
++    assert hubs[0].is_leaf is True
++    assert hubs[1].is_leaf is True
++
++    hubs[0].connect_both(hubs[2], Link())
++    assert hubs[0].is_leaf is True
++    assert hubs[2].is_leaf is True
++
++    hubs[0].connect_to(hubs[1], Link())
++    assert hubs[0].is_leaf is False
++    assert hubs[1].is_leaf is True
++
++
++def test_hub_automatically_converts_numeric_strings(valid_hub_data):
++    """Confirm Pydantic conversion of numeric strings to integers."""
++    data = {**valid_hub_data, "x": "10", "y": "20"}
++    hub = Hub(**data)  # type: ignore
++    assert isinstance(hub.x, int)
++    assert hub.x == 10
+diff --git a/tests/models/test_link.py b/tests/models/test_link.py
+index e25664b..1b8458a 100644
+--- a/tests/models/test_link.py
++++ b/tests/models/test_link.py
+@@ -4,32 +4,35 @@ from pydantic import ValidationError
+ from flyin.models.link import Link
+ 
+ 
+-@pytest.mark.parametrize(
+-    "max_link_capacity",
+-    [1, 1506486106840656004],
+-)
+-def test_link_initialization_sets_attributes_correctly_given_valid_input(
+-    max_link_capacity,
+-):
+-    """Verify that a valid link can be created."""
+-    link = Link(max_link_capacity=max_link_capacity)
+-    assert link.max_link_capacity == max_link_capacity
+-
+-
+-def test_link_capacity_defaults_to_one_when_not_specified():
+-    """Ensure the default link capacity is set to 1."""
++def test_link_initializes_with_default_values():
++    """Verify that a Link starts with zero drones and capacity of one."""
+     link = Link()
++    assert link.drones == 0
+     assert link.max_link_capacity == 1
+ 
+ 
+-@pytest.mark.parametrize("capacity", [-1, -100])
+-def test_link_enforces_non_negative_capacity_constraint(capacity):
+-    """Ensure that negative link capacities are rejected."""
++@pytest.mark.parametrize("field", ["drones", "max_link_capacity"])
++def test_link_prevents_negative_values(field):
++    """Ensure that drone count and capacity cannot be negative."""
+     with pytest.raises(ValidationError):
+-        Link(max_link_capacity=capacity)
++        Link(**{field: -1})
+ 
+ 
+-def test_link_accepts_exactly_zero_as_minimum_capacity():
+-    """Confirm that a capacity of zero is valid according to ge=0."""
+-    link = Link(max_link_capacity=0)
+-    assert link.max_link_capacity == 0
++def test_link_forbids_extra_fields():
++    """Confirm that unknown attributes trigger a validation error."""
++    with pytest.raises(ValidationError):
++        Link(unknown_field="invalid")  # type: ignore
++
++
++@pytest.mark.parametrize("capacity", [0, 100])
++def test_link_accepts_valid_capacities(capacity):
++    """Confirm that valid non-negative integers are accepted."""
++    link = Link(max_link_capacity=capacity)
++    assert link.max_link_capacity == capacity
++
++
++def test_link_coerces_strings_to_integers():
++    """Verify that Pydantic converts numeric strings to integers."""
++    link = Link(drones="5", max_link_capacity="10")  # type: ignore
++    assert isinstance(link.drones, int)
++    assert link.max_link_capacity == 10
