@@ -8,7 +8,9 @@ class HubError(FlyInError):
 
 
 class HubSelfConnectionError(HubError):
-    """Raised when a hub attempt to establish a connection with itself."""
+    """
+    Error raised when a hub attempt to establish a connection with itself.
+    """
 
     default_message = "A hub cannot be connected to itself."
 

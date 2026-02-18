@@ -10,25 +10,40 @@ class LoaderError(FlyInError):
 
 
 class LoaderFileNotFoundError(LoaderError):
-    """Raised when the target graph file does not exist on the filesystem."""
+    """
+    Error raised when the target graph file does not exist on the filesystem.
+    """
 
     default_message = "The specified graph file was not found."
 
 
 class LoaderFilePermissionError(LoaderError):
-    """Raised when the application lacks permissions to access the file."""
+    """
+    Error raised when the application lacks permissions to access the file.
+    """
 
     default_message = "Permission denied for the specified graph file."
 
 
 class LoaderEmptyFileError(LoaderError):
-    """Raised when the provided graph file contains no data to parse."""
+    """
+    Error raised when the provided graph file contains no data to parse.
+    """
 
     default_message = "The graph file is empty."
 
 
 class LoaderValidationError(LoaderError):
+    """Error raised when configuration data fails validation checks."""
+
     def __init__(self, e: ValidationError) -> None:
+        """
+        Formats and initializes validation error details.
+
+        Args:
+            e: The validation error object containing a
+                collection of failures (pydantic.ValidationError).
+        """
         messages: list[str] = []
 
         messages.append("")
