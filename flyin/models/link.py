@@ -1,10 +1,14 @@
-from __future__ import annotations
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class Link(BaseModel):
-    """Represents a connection link with capacity constraints."""
+    """
+    Represents a connection link with capacity constraints.
+
+    Attributes:
+        drones: Current number of drones traveling on this link.
+        max_link_capacity: Maximum drone capacity allowed on the link.
+    """
 
     model_config = ConfigDict(extra="forbid")
 

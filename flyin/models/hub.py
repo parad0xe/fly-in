@@ -51,9 +51,18 @@ class HubMetadataType(str, Enum):
 
 
 class Hub(BaseModel):
-    """
-    Represent a spatial network node with
-        operational constraints and peer connections.
+    """Represent a spatial network node with operational constraints.
+
+    Attributes:
+        name: Unique identifier starting with a letter.
+        x: X-coordinate in the spatial grid.
+        y: Y-coordinate in the spatial grid.
+        zone: Access level (defaults to NORMAL).
+        color: Optional visual identifier.
+        drones: Current number of drones stationed.
+        max_drones: Maximum drone capacity.
+        is_leaf: True if the hub has one or fewer connections.
+        links: List of peer hubs and their associated links.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -72,13 +81,23 @@ class Hub(BaseModel):
     links: list[tuple[Hub, Link]] = Field(default_factory=lambda: [])
 
     def model_post_init(self, context: Any) -> None:
+        """Execute integrity checks after model initialization."""
         self.ensure_integrity()
         return super().model_post_init(context)
 
     def ensure_integrity(self) -> Self:
         """
-        Ensure all peer connections are logically
-            consistent and prevent self-linking.
+        Ensure connections are logically consistent.
+
+        Updates the is_leaf status and prevents self-linking or
+            duplicate connections.
+
+        Returns:
+            The current instance for chaining.
+
+        Raises:
+            HubDuplicateLinkError: If multiple links exist to same hub.
+            HubSelfConnectionError: If a hub attempts to link to itself.
         """
         hub_names = [hub.name for hub, _ in self.links]
         hub_name_counts = Counter(hub_names)
@@ -99,9 +118,23 @@ class Hub(BaseModel):
         return self
 
     def connect_to(self, hub: Hub, link: Link) -> None:
+        """
+        Add a directed connection to a peer hub.
+
+        Args:
+            hub: Target hub instance.
+            link: Link properties for this connection.
+        """
         self.links.append((hub, link))
         self.ensure_integrity()
 
     def connect_both(self, hub: Hub, link: Link) -> None:
+        """
+        Establish a bidirectional connection between two hubs.
+
+        Args:
+            hub: Peer hub to connect with.
+            link: Shared link instance for both directions.
+        """
         self.connect_to(hub, link)
         hub.connect_to(self, link)
