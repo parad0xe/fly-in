@@ -17,6 +17,16 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 class GraphParser:
+    """
+    Parser for converting raw line-based input into Graph components.
+
+    Attributes:
+        KV_SEP: Separator between key and value (default ':').
+        META_SEP: Separator for metadata pairs (default '=').
+        HUB_PATTERN: Regex for parsing hub definitions.
+        CONNECTION_PATTERN: Regex for parsing link definitions.
+    """
+
     KV_SEP = ":"
     META_SEP = "="
 
@@ -29,6 +39,20 @@ class GraphParser:
     )
 
     def parse_lines(self, lines: Iterable[str]) -> dict | None:
+        """
+        Parses lines into graph data.
+
+        Args:
+            lines: Iterable of strings to be parsed.
+
+        Returns:
+            Dictionary of graph components or None if no hubs found.
+
+        Raises:
+            ParserMissingSeparatorError: If ':' is missing in a line.
+            ParserUnhandledKeyError: If a key has no associated handler.
+            ParserError: If 'nb_drones' is not first or data is invalid.
+        """
         logger.info("Starting graph parsing process.")
 
         self.nb_drones: int | None = None
@@ -75,6 +99,16 @@ class GraphParser:
         return self._build_graph_payload()
 
     def _handle_nb_drones(self, lineno: int, data: str) -> None:
+        """
+        Processes and stores the total number of drones.
+
+        Args:
+            lineno: Current line number for error reporting.
+            data: Raw string value representing the drone count.
+
+        Raises:
+            ParserError: If the data cannot be converted to an integer.
+        """
         try:
             nb_drones: int = int(data)
         except ValueError as e:
@@ -85,6 +119,13 @@ class GraphParser:
         logger.info(f"Number of drones set to: {self.nb_drones}")
 
     def _handle_connection(self, lineno: int, data: str) -> None:
+        """
+        Handles hub connection logic and updates hub adjacency.
+
+        Args:
+            lineno: Current line number for error reporting.
+            data: Raw string representing the connection and metadata.
+        """
         hub_a, hub_b, link = self._parse_connection(lineno, data)
         hub_a.connect_both(hub_b, link)
         self.links.append(link)
@@ -94,6 +135,14 @@ class GraphParser:
         )
 
     def _handle_hub(self, lineno: int, data: str, hub_type: str) -> None:
+        """
+        Creates a hub and assigns it as start, end, or normal.
+
+        Args:
+            lineno: Current line number for error reporting.
+            data: Raw string containing name, coordinates, and metadata.
+            hub_type: Role of the hub ('start', 'end', or 'normal').
+        """
         payload = self._parse_hub_payload(lineno, data)
 
         if hub_type == "start":
@@ -114,6 +163,20 @@ class GraphParser:
     def _parse_connection(
         self, lineno: int, data: str
     ) -> tuple[Hub, Hub, Link]:
+        """
+        Extracts connection details and validates hub existence.
+
+        Args:
+            lineno: Current line number for error reporting.
+            data: Raw string to match against CONNECTION_PATTERN.
+
+        Returns:
+            A tuple containing (source_hub, target_hub, created_link).
+
+        Raises:
+            ParserError: If the format is invalid.
+            ParserMissingHubError: If a referenced hub is not defined.
+        """
         if match := self.CONNECTION_PATTERN.match(data):
             name_a, name_b, metadata_str = match.groups()
         else:
@@ -139,6 +202,20 @@ class GraphParser:
         return hub_a, hub_b, link
 
     def _parse_hub_payload(self, lineno: int, data: str) -> dict:
+        """
+        Parses raw hub data into a dictionary for instantiation.
+
+        Args:
+            lineno: Current line number for error reporting.
+            data: Raw string to match against HUB_PATTERN.
+
+        Returns:
+            A dictionary containing 'name', 'x', 'y', and metadata.
+
+        Raises:
+            ParserError: If the format is invalid
+                or name contains invalid char.
+        """
         if match := self.HUB_PATTERN.match(data):
             name, x, y, metadata_str = match.groups()
         else:
@@ -158,6 +235,19 @@ class GraphParser:
         return payload
 
     def _parse_metadata(self, lineno: int, metadata_str: str) -> dict:
+        """
+        Converts metadata string [k=v ...] into a dictionary.
+
+        Args:
+            lineno: Current line number for error reporting.
+            metadata_str: Raw string containing key-value pairs.
+
+        Returns:
+            A dictionary of extracted metadata.
+
+        Raises:
+            ParserError: If a pair does not contain the key-value separator.
+        """
         metadata: dict = {}
         for part in metadata_str.split():
             if self.META_SEP not in part:
@@ -170,6 +260,12 @@ class GraphParser:
         return metadata
 
     def _build_graph_payload(self) -> dict:
+        """
+        Aggregates all parsed components into a final payload.
+
+        Returns:
+            A dictionary structured for Graph model instantiation.
+        """
         return {
             "hubs": list(self.hubs.values()),
             "links": self.links,
