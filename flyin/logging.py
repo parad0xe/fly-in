@@ -7,6 +7,13 @@ from flyin.arguments import Args
 
 
 class LoggingSystem:
+    """
+    System-wide logging configuration and initialization.
+
+    Attributes:
+        CONFIG: Dictionary defining formatters, handlers, and loggers.
+    """
+
     CONFIG = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -39,6 +46,12 @@ class LoggingSystem:
         cls: type[LoggingSystem],
         args: Args,
     ) -> None:
+        """
+        Configures the logging environment based on verbosity level.
+
+        Args:
+            args: Command-line arguments containing the verbose count.
+        """
         level: int = cls._get_level(args.verbose)
 
         logging.config.dictConfig(LoggingSystem.CONFIG)
@@ -51,6 +64,16 @@ class LoggingSystem:
 
     @staticmethod
     def _get_level(verbose: int) -> int:
+        """
+        Maps verbose count to standard logging levels.
+
+        Args:
+            verbose: Integer representing the verbosity level.
+
+        Returns:
+            The corresponding logging level constant.
+        """
+
         match verbose:
             case 0:
                 return logging.ERROR

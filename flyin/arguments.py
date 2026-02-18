@@ -9,11 +9,26 @@ from typing_extensions import Self
 
 @dataclass(frozen=True)
 class Args:
+    """
+    Command-line arguments container for the FlyIn application.
+
+    Attributes:
+        verbose: Integer representing the logging verbosity level.
+        file: Path to the input graph configuration file.
+    """
+
     verbose: int
     file: str
 
     @classmethod
     def parse_arguments(cls) -> Self:
+        """
+        Parses CLI arguments and returns an initialized Args instance.
+        Uses argparse to handle input flags and positional arguments.
+
+        Returns:
+            An instance of Args populated with command-line data.
+        """
         parser = argparse.ArgumentParser(
             prog="FlyIn",
             description=textwrap.dedent(
