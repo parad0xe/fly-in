@@ -2,7 +2,12 @@ from flyin.exceptions.base import FlyInError
 
 
 class ParserError(FlyInError):
-    """Base class for all errors occurring during graph parsing."""
+    """
+    Base class for all errors occurring during graph parsing.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
+    """
 
     default_message = "An error occurred while parsing the graph data."
 

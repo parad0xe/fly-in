@@ -2,7 +2,12 @@ from flyin.exceptions.base import FlyInError
 
 
 class HubError(FlyInError):
-    """Base class for all errors related to hub operations and validation."""
+    """
+    Base class for all errors related to hub operations and validation.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
+    """
 
     default_message = "An unspecified hub error occurred."
 
@@ -10,6 +15,9 @@ class HubError(FlyInError):
 class HubSelfConnectionError(HubError):
     """
     Error raised when a hub attempt to establish a connection with itself.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
     """
 
     default_message = "A hub cannot be connected to itself."

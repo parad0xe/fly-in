@@ -1,5 +1,10 @@
 class FlyInError(Exception):
-    """Base class for all domain-specific errors in the system."""
+    """
+    Base class for all domain-specific errors in the system.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
+    """
 
     default_message = "An unspecified error occurred."
 

@@ -4,7 +4,12 @@ from flyin.exceptions.base import FlyInError
 
 
 class LoaderError(FlyInError):
-    """Base class for all errors related to graph operations and integrity."""
+    """
+    Base class for all errors related to graph operations and integrity.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
+    """
 
     default_message = "Failed to load the graph data."
 
@@ -12,6 +17,9 @@ class LoaderError(FlyInError):
 class LoaderFileNotFoundError(LoaderError):
     """
     Error raised when the target graph file does not exist on the filesystem.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
     """
 
     default_message = "The specified graph file was not found."
@@ -20,6 +28,9 @@ class LoaderFileNotFoundError(LoaderError):
 class LoaderFilePermissionError(LoaderError):
     """
     Error raised when the application lacks permissions to access the file.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
     """
 
     default_message = "Permission denied for the specified graph file."
@@ -28,6 +39,9 @@ class LoaderFilePermissionError(LoaderError):
 class LoaderEmptyFileError(LoaderError):
     """
     Error raised when the provided graph file contains no data to parse.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
     """
 
     default_message = "The graph file is empty."
