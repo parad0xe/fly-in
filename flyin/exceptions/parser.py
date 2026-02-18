@@ -19,8 +19,8 @@ class ParserError(FlyInError):
             lineno: The index of the line where the error occurred.
             message: An optional custom message describing the error.
         """
-        message = message or self.default_message
-        super().__init__(f"{message} (line: {lineno})")
+        msg = message or self.default_message
+        super().__init__(f"{msg} (line: {lineno})")
 
 
 class ParserMissingSeparatorError(ParserError):
@@ -37,11 +37,11 @@ class ParserMissingSeparatorError(ParserError):
             separator: The specific character that was expected.
             message: An optional custom message for the missing separator.
         """
-        message = (
+        msg = (
             message
             or f"Required separator '{separator}' not found on this line."
         )
-        super().__init__(lineno, message)
+        super().__init__(lineno, msg)
 
 
 class ParserUnknownKeyError(ParserError):
@@ -58,8 +58,8 @@ class ParserUnknownKeyError(ParserError):
             key: The string value of the unrecognized key.
             message: An optional custom message for the unknown key.
         """
-        message = message or f"Unknown configuration key: '{key}'."
-        super().__init__(lineno, message)
+        msg = message or f"Unknown configuration key: '{key}'."
+        super().__init__(lineno, msg)
 
 
 class ParserUnhandledKeyError(ParserError):
@@ -76,8 +76,8 @@ class ParserUnhandledKeyError(ParserError):
             key: The key that has no associated parsing logic.
             message: An optional custom message for the missing handler.
         """
-        message = message or f"No handler defined to process the key: '{key}'."
-        super().__init__(lineno, message)
+        msg = message or f"No handler defined to process the key: '{key}'."
+        super().__init__(lineno, msg)
 
 
 class ParserMissingHubError(ParserError):
@@ -94,5 +94,5 @@ class ParserMissingHubError(ParserError):
             hub_name: The name of the hub that was not found.
             message: An optional custom message for the reference error.
         """
-        message = message or f"Reference to undefined hub: '{hub_name}'."
-        super().__init__(lineno, message)
+        msg = message or f"Reference to undefined hub: '{hub_name}'."
+        super().__init__(lineno, msg)
