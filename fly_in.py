@@ -1,5 +1,6 @@
 import logging
 
+import arcade
 from rich.console import Console
 from rich.table import Table
 
@@ -8,6 +9,7 @@ from flyin.exceptions.base import FlyInError
 from flyin.io.file_loader import GraphFileLoader
 from flyin.logging import LoggingSystem
 from flyin.models.graph import Graph
+from flyin.renderer import GraphWindow
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -30,12 +32,16 @@ def main() -> None:
         exit(2)
 
     print_graph_summary(graph)
+
+    window = GraphWindow.load(graph)
+
+    arcade.run()
     # render graph
     # update graph (+render graph)
     # create solutions
 
 
-def print_graph_summary(graph: Graph):
+def print_graph_summary(graph: Graph) -> None:
     """Display the graph structure and metadata in a terminal table."""
     console = Console()
 
