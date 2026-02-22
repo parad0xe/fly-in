@@ -1,4 +1,9 @@
-from pydantic import BaseModel, ConfigDict, Field
+from itertools import count
+from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+_id_counter = count(1)
 
 
 class Link(BaseModel):
@@ -12,5 +17,13 @@ class Link(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    id: int = Field(default_factory=lambda: next(_id_counter), frozen=True)
     drones: int = Field(default=0, ge=0)
     max_link_capacity: int = Field(default=1, ge=0, frozen=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def prevent_id_injection(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "id" in data:
+            data.pop("id")
+        return data
