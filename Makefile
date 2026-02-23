@@ -32,7 +32,6 @@ install: $(POETRY_LOCK) $(VENV_STATE) | $(PYTHON)
 run: install | $(PYTHON)
 	@echo "$(PYTHON) $(MAIN) $(ARGS)"
 	@$(PYTHON) $(MAIN) $(ARGS) || true
-	@$(MAKE) cache-clean
 
 $(POETRY_LOCK) $(VENV_STATE) &: $(PYPROJECT_TOML) | $(PYTHON)
 	@$(POETRY) lock
@@ -49,20 +48,17 @@ debug: install
 	$(PYTHON) -m pdb $(MAIN) $(ARGS)
 
 lint: install
-	@-$(FLAKE8)
-	@-$(MYPY) . --check-untyped-defs \
+	@$(FLAKE8)
+	@$(MYPY) . --check-untyped-defs \
 	--warn-unused-ignores --ignore-missing-imports \
 	--warn-return-any --disallow-untyped-defs
-	@$(MAKE) cache-clean --no-print-directory
 
 lint-strict: install
-	@-$(FLAKE8)
-	@-$(MYPY) . --strict
-	@$(MAKE) cache-clean
+	@$(FLAKE8)
+	@$(MYPY) . --strict
 
 tests: install
-	@-$(PYTEST) 
-	@$(MAKE) cache-clean
+	@$(PYTEST) 
 
 $(PYTHON):
 	@python3 -m venv $(VENV)

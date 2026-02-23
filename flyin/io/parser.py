@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable
 
 from flyin.exceptions.parser import (
     ParserError,
@@ -38,7 +38,7 @@ class GraphParser:
         r"^\s*([a-z][\w]*)-([a-z][\w]*)\s*(?:\[\s*(.*)\s*\])?\s*$", re.I
     )
 
-    def parse_lines(self, lines: Iterable[str]) -> dict | None:
+    def parse_lines(self, lines: Iterable[str]) -> dict[str, Any] | None:
         """
         Parses lines into graph data.
 
@@ -189,7 +189,7 @@ class GraphParser:
         if name_b not in self.hubs:
             raise ParserMissingHubError(lineno, name_b)
 
-        payload: dict = {}
+        payload: dict[str, Any] = {}
 
         if metadata_str:
             metadata = self._parse_metadata(lineno, metadata_str)
@@ -201,7 +201,7 @@ class GraphParser:
 
         return hub_a, hub_b, link
 
-    def _parse_hub_payload(self, lineno: int, data: str) -> dict:
+    def _parse_hub_payload(self, lineno: int, data: str) -> dict[str, Any]:
         """
         Parses raw hub data into a dictionary for instantiation.
 
@@ -226,7 +226,7 @@ class GraphParser:
                 lineno, f"Invalid hub name <{name}>: invalid char <->."
             )
 
-        payload: dict = {"name": name, "x": x, "y": y}
+        payload: dict[str, Any] = {"name": name, "x": x, "y": y}
 
         if metadata_str:
             metadata = self._parse_metadata(lineno, metadata_str)
@@ -234,7 +234,9 @@ class GraphParser:
 
         return payload
 
-    def _parse_metadata(self, lineno: int, metadata_str: str) -> dict:
+    def _parse_metadata(
+        self, lineno: int, metadata_str: str
+    ) -> dict[str, Any]:
         """
         Converts metadata string [k=v ...] into a dictionary.
 
@@ -248,7 +250,7 @@ class GraphParser:
         Raises:
             ParserError: If a pair does not contain the key-value separator.
         """
-        metadata: dict = {}
+        metadata: dict[str, Any] = {}
         for part in metadata_str.split():
             if self.META_SEP not in part:
                 raise ParserError(
@@ -259,7 +261,7 @@ class GraphParser:
             metadata[metadata_key] = metadata_value
         return metadata
 
-    def _build_graph_payload(self) -> dict:
+    def _build_graph_payload(self) -> dict[str, Any]:
         """
         Aggregates all parsed components into a final payload.
 

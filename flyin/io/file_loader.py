@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -47,7 +48,7 @@ class GraphFileLoader:
         try:
             try:
                 with open(file) as f:
-                    payload: dict | None = parser.parse_lines(f)
+                    payload: dict[str, Any] | None = parser.parse_lines(f)
             except FileNotFoundError as e:
                 raise LoaderFileNotFoundError() from e
             except PermissionError as e:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from enum import Enum
-from typing import Any, Generator
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Self
@@ -139,10 +139,3 @@ class Hub(BaseModel):
         """
         self.connect_to(hub, link)
         hub.connect_to(self, link)
-
-    def iter_unique_connections(self) -> Generator[tuple[Hub, Link]]:
-        viewed_links: list[int] = []
-        for to, link in self.connections:
-            if link.id not in viewed_links:
-                viewed_links.append(link.id)
-                yield (to, link)

@@ -1,3 +1,5 @@
+from typing import Iterator
+
 from pydantic import BaseModel, ConfigDict
 
 from flyin.models.hub import Hub
@@ -21,3 +23,17 @@ class Graph(BaseModel):
     links: list[Link]
     start_hub: Hub
     end_hub: Hub
+
+    def iter_unique_connections(self) -> Iterator[tuple[Hub, Hub, Link]]:
+        """
+        Yields unique connections between hubs in the graph.
+
+        Returns:
+            An iterator of hub A, hub B, and unique link triplets.
+        """
+        viewed_links: set[int] = set()
+        for hub in self.hubs:
+            for to, link in hub.connections:
+                if link.id not in viewed_links:
+                    viewed_links.add(link.id)
+                    yield (hub, to, link)
