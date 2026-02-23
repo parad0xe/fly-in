@@ -9,7 +9,7 @@ from flyin.exceptions.base import FlyInError
 from flyin.io.file_loader import GraphFileLoader
 from flyin.logging import LoggingSystem
 from flyin.models.graph import Graph
-from flyin.renderer import GraphWindow
+from flyin.renderer.view import GraphRenderer
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ def main() -> None:
 
     print_graph_summary(graph)
 
-    window = GraphWindow.load(graph)
+    GraphRenderer.load(graph)
 
     arcade.run()
     # render graph
@@ -61,8 +61,11 @@ def print_graph_summary(graph: Graph) -> None:
         # Formatage des connexions : 'Voisin (Capacité)'
         conns = ", ".join(
             [
-                f"{hub.name} <-> {peer.name} (drone: {link.drones}) (max: {link.max_link_capacity})"
-                for peer, link in hub.links
+                (
+                    f"{hub.name} <-> {peer.name} (drone: {link.drones}) "
+                    "(max: {link.max_link_capacity})"
+                )
+                for peer, link in hub.connections
             ]
         )
 

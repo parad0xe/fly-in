@@ -24,6 +24,16 @@ testpaths = [
     "tests",
 ]
 
+[tool.flake8]
+exclude = [
+	"tests"
+]
+
+[tool.mypy]
+exclude = [
+	"tests"
+]
+
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
