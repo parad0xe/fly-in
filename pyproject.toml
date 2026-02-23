@@ -7,6 +7,7 @@ python = ">=3.10"
 pydantic = "2.12.5"
 typing-extensions = "4.15.0"
 arcade = "3.3.3"
+rich = "14.3.2"
 
 [tool.poetry.group.dev]
 optional = true
@@ -15,7 +16,6 @@ optional = true
 mypy = "1.19.1"
 flake8 = "7.3.0"
 pytest = "9.0.2"
-rich = "14.3.2"
 
 [tool.pytest]
 minversion = "9.0"

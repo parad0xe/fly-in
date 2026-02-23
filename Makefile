@@ -6,6 +6,7 @@ ARGS ?=
 
 VENV := .venv
 VENV_STATE := $(VENV)/.install
+VENV_STATE_DEV := $(VENV)/.install-dev
 
 POETRY_LOCK := poetry.lock
 PYPROJECT_TOML := pyproject.toml
@@ -26,38 +27,45 @@ PYTEST := $(PYTHON) -m pytest
 PIP := $(PYTHON) -m pip
 POETRY := POETRY_VIRTUALENVS_IN_PROJECT=true $(PYTHON) -m poetry
 
+INSTALL_OPTS = 
+
 # rules
 install: $(POETRY_LOCK) $(VENV_STATE) | $(PYTHON)
 
+install-dev: 
+	@$(MAKE) --no-print-directory -s \
+		INSTALL_OPTS="--with dev" VENV_STATE="$(VENV_STATE_DEV)" \
+		install 
+
 run: install | $(PYTHON)
 	@echo "$(PYTHON) $(MAIN) $(ARGS)"
-	@$(PYTHON) $(MAIN) $(ARGS) || true
+	@$(PYTHON) $(MAIN) $(ARGS)
 
 $(POETRY_LOCK) $(VENV_STATE) &: $(PYPROJECT_TOML) | $(PYTHON)
 	@$(POETRY) lock
-	@$(POETRY) install --with dev --no-root
+	@$(POETRY) install $(INSTALL_OPTS) --no-root
 	@touch $(POETRY_LOCK) $(VENV_STATE)
 
 cache-clean:
-	@$(FIND_CACHES) -exec rm -rf {} + 1>/dev/null
+	$(FIND_CACHES) -exec rm -rf {} + 1>/dev/null
 
 clean: cache-clean
 	rm -rf $(VENV)
 
-debug: install
+debug: install-dev
 	$(PYTHON) -m pdb $(MAIN) $(ARGS)
 
-lint: install
+lint: install-dev
 	@$(FLAKE8)
 	@$(MYPY) . --check-untyped-defs \
 	--warn-unused-ignores --ignore-missing-imports \
 	--warn-return-any --disallow-untyped-defs
 
-lint-strict: install
+lint-strict: install-dev
 	@$(FLAKE8)
 	@$(MYPY) . --strict
 
-tests: install
+tests: install-dev
 	@$(PYTEST) 
 
 $(PYTHON):
@@ -65,4 +73,4 @@ $(PYTHON):
 	@$(PIP) install -U pip poetry
 
 # miscellaneous
-.PHONY: install run debug lint lint-strict clean cache-clean tests
+.PHONY: install run debug lint lint-strict clean cache-clean tests install-dev
