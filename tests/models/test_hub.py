@@ -18,7 +18,7 @@ def test_hub_initializes_with_default_values(valid_hub_data):
     assert hub.zone == HubZoneType.NORMAL
     assert hub.drones == 0
     assert hub.max_drones == 1
-    assert hub.links == []
+    assert hub.connections == []
     assert hub.is_leaf is True
 
 
@@ -68,27 +68,27 @@ def test_hub_rejects_invalid_naming_patterns(valid_hub_data, name):
         Hub(**valid_hub_data)
 
 
-def test_hub_connect_to_registers_link(valid_hub_data):
-    """Confirm the connect_to method correctly updates the links list."""
+def test_hub_connect_to_registers_connection(valid_hub_data):
+    """Confirm the connect_to method correctly updates the connections list."""
     hub_a = Hub(**valid_hub_data)
     hub_b = Hub(name="DroneBeta", x=30, y=40)
     link = Link(max_link_capacity=5)
 
     hub_a.connect_to(hub_b, link)
 
-    assert len(hub_a.links) == 1
-    assert hub_a.links[0] == (hub_b, link)
-    assert len(hub_b.links) == 0
+    assert len(hub_a.connections) == 1
+    assert hub_a.connections[0] == (hub_b, link)
+    assert len(hub_b.connections) == 0
 
 
 def test_hub_prevents_self_connection_on_instantiation(valid_hub_data):
     """Ensure self-connection is blocked during object creation."""
     hub_a = Hub(**valid_hub_data)
     with pytest.raises(HubSelfConnectionError):
-        Hub(**valid_hub_data, links=[(hub_a, Link())])
+        Hub(**valid_hub_data, connections=[(hub_a, Link())])
 
 
-def test_hub_connect_both_registers_mutual_links(valid_hub_data):
+def test_hub_connect_both_registers_mutual_connections(valid_hub_data):
     """Verify connect_both establishes a bidirectional connection."""
     hub_a = Hub(**valid_hub_data)
     hub_b = Hub(name="DroneBeta", x=30, y=40)
@@ -96,8 +96,8 @@ def test_hub_connect_both_registers_mutual_links(valid_hub_data):
 
     hub_a.connect_both(hub_b, link)
 
-    assert (hub_b, link) in hub_a.links
-    assert (hub_a, link) in hub_b.links
+    assert (hub_b, link) in hub_a.connections
+    assert (hub_a, link) in hub_b.connections
 
 
 def test_hub_add_link_prevents_self_connection(valid_hub_data):
@@ -107,12 +107,12 @@ def test_hub_add_link_prevents_self_connection(valid_hub_data):
         hub_a.connect_to(hub_a, Link())
 
 
-def test_hub_prevents_duplicate_links(valid_hub_data):
+def test_hub_prevents_duplicate_connections(valid_hub_data):
     """Ensure duplicate connections between hubs are prohibited."""
     hub_a = Hub(**valid_hub_data)
     hub_b = Hub(name="Beta", x=30, y=40)
     link = Link()
-    hub_a.links = [(hub_b, link), (hub_b, link)]
+    hub_a.connections = [(hub_b, link), (hub_b, link)]
     with pytest.raises(HubDuplicateLinkError):
         hub_a.ensure_integrity()
 
@@ -120,7 +120,7 @@ def test_hub_prevents_duplicate_links(valid_hub_data):
     hub_b = Hub(name="Beta", x=30, y=40)
     link_1 = Link()
     link_2 = Link()
-    hub_a.links = [(hub_b, link_1), (hub_b, link_2)]
+    hub_a.connections = [(hub_b, link_1), (hub_b, link_2)]
     with pytest.raises(HubDuplicateLinkError):
         hub_a.ensure_integrity()
 
@@ -150,7 +150,7 @@ def test_hub_connect_both_prevents_duplicates(valid_hub_data):
 
 
 def test_hub_updates_leaf_status(valid_hub_data):
-    """Verify is_leaf becomes False when more than one links exist."""
+    """Verify is_leaf becomes False when more than one connections exist."""
     hub = Hub(**valid_hub_data)
     assert hub.is_leaf is True
 

@@ -34,9 +34,9 @@ def test_parser_handles_valid_input(parser):
     assert len(result["links"]) == 2
 
     assert result["links"][0].max_link_capacity == 5
-    assert len(result["hubs"][0].links) == 1
-    assert len(result["hubs"][1].links) == 1
-    assert len(result["hubs"][2].links) == 2
+    assert len(result["hubs"][0].connections) == 1
+    assert len(result["hubs"][1].connections) == 1
+    assert len(result["hubs"][2].connections) == 2
 
 
 def test_parser_enforces_nb_drones_precedence(parser):
