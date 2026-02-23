@@ -43,7 +43,7 @@ class GraphRenderer(arcade.Window):
 
     def setup(self) -> None:
         for hub in self.graph.hubs:
-            self.shapes.append(HubShape.create(hub, size=22))
+            self.shapes.append(HubShape.create(hub, size=23))
 
         for hub_a, hub_b, _ in self.graph.iter_unique_connections():
             self.links.append(
