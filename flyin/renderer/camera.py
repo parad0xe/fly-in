@@ -4,10 +4,11 @@ from arcade import Camera2D
 class CameraController:
     def __init__(
         self,
+        camera: Camera2D,
         position: tuple[float, float] = (0, 0),
         default_zoom: float = 0.7,
     ) -> None:
-        self.camera: Camera2D = Camera2D()
+        self.camera: Camera2D = camera
 
         self.camera.position = position
         self.camera.zoom = default_zoom

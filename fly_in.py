@@ -9,7 +9,7 @@ from flyin.exceptions.base import FlyInError
 from flyin.io.file_loader import GraphFileLoader
 from flyin.logging import LoggingSystem
 from flyin.models.graph import Graph
-from flyin.renderer.view import GraphRenderer
+from flyin.renderer.window import GraphWindow
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -31,14 +31,13 @@ def main() -> None:
         logger.exception(e)
         exit(2)
 
-    print_graph_summary(graph)
-
-    GraphRenderer.load(graph)
+    GraphWindow.load(graph)
 
     arcade.run()
     # render graph
     # update graph (+render graph)
     # create solutions
+    # print_graph_summary(graph)
 
 
 def print_graph_summary(graph: Graph) -> None:
