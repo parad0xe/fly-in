@@ -2,7 +2,7 @@ name: Fly-in CI
 
 on:
   push:
-    branches: [ "main", "develop" ]
+    branches: [ "main" ]   
 
 permissions:
   contents: read
