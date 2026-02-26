@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
 
 from flyin.models.hub import Hub, HubZoneType
 from flyin.models.link import Link
-from flyin.ui.constants import RESTRICTED_MARKER_SIZE, SPACING
+from flyin.ui.constants import HUB_SPACING, LINK_RESTRICTED_MARKER_SIZE
 
 
 class LinkItem(QGraphicsItemGroup):
@@ -20,13 +20,13 @@ class LinkItem(QGraphicsItemGroup):
         self.hub_b: Hub = hub_b
         self.link: Link = link
 
-        self.dx = (hub_b.x - hub_a.x) * SPACING
-        self.dy = (hub_b.y - hub_a.y) * SPACING
+        self.dx = (hub_b.x - hub_a.x) * HUB_SPACING
+        self.dy = (hub_b.y - hub_a.y) * HUB_SPACING
 
         self._setup_line()
         self._setup_markers()
 
-        self.setPos(hub_a.x * SPACING, hub_a.y * SPACING)
+        self.setPos(hub_a.x * HUB_SPACING, hub_a.y * HUB_SPACING)
         self.setZValue(-1)
         self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsSelectable)
 
@@ -71,12 +71,12 @@ class LinkItem(QGraphicsItemGroup):
             self._add_circle_marker(self.dx * 0.7, self.dy * 0.7)
 
     def _add_circle_marker(self, center_x: float, center_y: float) -> None:
-        offset = RESTRICTED_MARKER_SIZE / 2
+        offset = LINK_RESTRICTED_MARKER_SIZE / 2
         circle = QGraphicsEllipseItem(
             center_x - offset,
             center_y - offset,
-            RESTRICTED_MARKER_SIZE,
-            RESTRICTED_MARKER_SIZE,
+            LINK_RESTRICTED_MARKER_SIZE,
+            LINK_RESTRICTED_MARKER_SIZE,
         )
         circle.setBrush(QBrush(QColor(0, 0, 0, 160)))
         circle.setPen(QPen(Qt.PenStyle.NoPen))

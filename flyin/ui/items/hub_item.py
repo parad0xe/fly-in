@@ -7,25 +7,50 @@ from PyQt6.QtWidgets import (
     QGraphicsTextItem,
 )
 
-from flyin.models.hub import HubColorType
+from flyin.models.hub import Hub, HubColorType
+from flyin.ui.bus_events import UIBus
 from flyin.ui.constants import (
     HUB_SIZE,
-    SPACING,
+    HUB_SPACING,
 )
 from flyin.ui.helpers import UIHelper
 
 
 class HubItem(QGraphicsItemGroup):
+    name_label: QGraphicsTextItem
+    drone_label: QGraphicsTextItem
 
-    def __init__(self, hub):
+    def __init__(self, hub: Hub) -> None:
         super().__init__()
         self.hub = hub
 
         self._setup_shape()
         self._setup_labels()
 
-        self.setPos(hub.x * SPACING, hub.y * SPACING)
+        self.setPos(hub.x * HUB_SPACING, hub.y * HUB_SPACING)
         self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsSelectable)
+
+        UIBus.get().graph_updated.connect(self._refresh)
+
+    def get_details_html(self) -> tuple[str, list[str]]:
+        lines = [
+            f"Name: {self.hub.name}",
+            f"Zone: {self.hub.zone.value}",
+            f"Leaf: {self.hub.is_leaf}",
+            f"Drones: {self.hub.drones}",
+            f"Capacity: {self.hub.max_drones}",
+        ]
+
+        return "Hub Details", lines
+
+    def _refresh(self) -> None:
+        new_text = f"{self.hub.drones} / {self.hub.max_drones}"
+        self.drone_label.setPlainText(new_text)
+
+        rect_drone = self.drone_label.boundingRect()
+        self.drone_label.setPos(
+            -rect_drone.width() / 2, -rect_drone.height() / 2
+        )
 
     def _setup_shape(self) -> None:
         if self.hub.color == HubColorType.RAINBOW:
@@ -85,14 +110,3 @@ class HubItem(QGraphicsItemGroup):
 
         self.addToGroup(self.name_label)
         self.addToGroup(self.drone_label)
-
-    def get_details_html(self) -> tuple[str, list[str]]:
-        lines = [
-            f"Name: {self.hub.name}",
-            f"Zone: {self.hub.zone.value}",
-            f"Leaf: {self.hub.is_leaf}",
-            f"Drones: {self.hub.drones}",
-            f"Capacity: {self.hub.max_drones}",
-        ]
-
-        return "Hub Details", lines

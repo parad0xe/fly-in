@@ -4,6 +4,7 @@ from PyQt6.QtGui import QColor
 from PyQt6.QtWidgets import QGraphicsScene
 
 from flyin.models.graph import Graph
+from flyin.ui.constants import SCENE_PADDING
 from flyin.ui.items.hub_item import HubItem
 from flyin.ui.items.link_item import LinkItem
 
@@ -30,7 +31,11 @@ class MapScene(QGraphicsScene):
     def update_bounds(self) -> None:
         items_rect = self.itemsBoundingRect()
 
-        padding = 2000
-        new_rect = items_rect.adjusted(-padding, -padding, padding, padding)
+        new_rect = items_rect.adjusted(
+            -SCENE_PADDING,
+            -SCENE_PADDING,
+            SCENE_PADDING,
+            SCENE_PADDING,
+        )
 
         self.setSceneRect(new_rect)

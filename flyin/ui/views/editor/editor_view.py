@@ -1,13 +1,18 @@
+from typing import cast
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QResizeEvent, QWheelEvent
 from PyQt6.QtWidgets import QFrame, QGraphicsView
 
 from flyin.models.graph import Graph
-from flyin.ui.overlays.map_info_overlay import MapInfoOverlay
-from flyin.ui.scenes.map_scene import MapScene
+from flyin.ui.bus_events import UIBus
+from flyin.ui.views.editor.overlays.map_details_overlay import (
+    MapDetailsOverlay,
+)
+from flyin.ui.views.editor.scenes.map_scene import MapScene
 
 
-class MapView(QGraphicsView):
+class EditorView(QGraphicsView):
     ZOOM_FACTOR = 0.1
     MAX_ZOOM = 1.5
     MIN_ZOOM = 0.2
@@ -28,10 +33,12 @@ class MapView(QGraphicsView):
         )
         self.setFrameShape(QFrame.Shape.NoFrame)
 
-        self.overlay = MapInfoOverlay(self)
+        self.overlay = MapDetailsOverlay(self)
 
         if scene.start_hub_item is not None:
             self.centerOn(scene.start_hub_item)
+
+        UIBus.get().graph_updated.connect(self._refresh)
 
     def wheelEvent(self, event: QWheelEvent | None) -> None:
         if event is None:
@@ -57,6 +64,14 @@ class MapView(QGraphicsView):
         x = self.width() - self.overlay.width() - margin
         y = self.height() - self.overlay.height() - margin
         self.overlay.move(x, y)
+
+    def _refresh(self) -> None:
+        scene: MapScene = cast(MapScene, self.scene())
+
+        if self.overlay.isVisible():
+            selected = scene.selectedItems()
+            if selected:
+                self.overlay.set_item(selected[0])
 
     def _on_selection_changed(self) -> None:
         scene = self.scene()

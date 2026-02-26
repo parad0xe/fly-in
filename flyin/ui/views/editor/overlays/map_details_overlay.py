@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import (
 )
 
 
-class MapInfoOverlay(QFrame):
+class MapDetailsOverlay(QFrame):
 
     def __init__(self, parent: QWidget) -> None:
         super().__init__(parent)
@@ -80,8 +80,6 @@ class MapInfoOverlay(QFrame):
             self.adjustSize()
         else:
             self.hide()
-
-        self.adjustSize()
 
     def _format_html_content(self, lines: list[str]) -> str:
         style = """
