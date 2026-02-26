@@ -34,6 +34,8 @@ class HubColorType(str, Enum):
     CRIMSON = "crimson"
     RAINBOW = "rainbow"
     CYAN = "cyan"
+    LIME = "lime"
+    MAGENTA = "magenta"
 
 
 class HubZoneType(str, Enum):
