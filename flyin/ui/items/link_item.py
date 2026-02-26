@@ -1,9 +1,14 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QColor, QPainterPath, QPen
-from PyQt6.QtWidgets import QGraphicsItemGroup, QGraphicsLineItem
+from PyQt6.QtGui import QBrush, QColor, QPainterPath, QPen
+from PyQt6.QtWidgets import (
+    QGraphicsEllipseItem,
+    QGraphicsItemGroup,
+    QGraphicsLineItem,
+)
 
 from flyin.models.hub import Hub, HubZoneType
 from flyin.models.link import Link
+from flyin.ui.constants import RESTRICTED_MARKER_SIZE, SPACING
 
 
 class LinkItem(QGraphicsItemGroup):
@@ -15,35 +20,64 @@ class LinkItem(QGraphicsItemGroup):
         self.hub_b: Hub = hub_b
         self.link: Link = link
 
-        spacing = 520
+        self.dx = (hub_b.x - hub_a.x) * SPACING
+        self.dy = (hub_b.y - hub_a.y) * SPACING
 
-        dx = (hub_b.x - hub_a.x) * spacing
-        dy = (hub_b.y - hub_a.y) * spacing
+        self._setup_line()
+        self._setup_markers()
 
-        self.line = QGraphicsLineItem(0, 0, dx, dy)
+        self.setPos(hub_a.x * SPACING, hub_a.y * SPACING)
+        self.setZValue(-1)
+        self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsSelectable)
+
+    def shape(self) -> QPainterPath:
+        return self.line.shape()
+
+    def get_details_html(self) -> tuple[str, list[str]]:
+        lines = [
+            f"Path: {self.hub_a.name} &#8596; {self.hub_b.name}",
+            f"Drones: {self.link.drones}",
+            f"Capacity: {self.link.max_link_capacity}",
+        ]
+
+        return "Link Details", lines
+
+    def _setup_line(self) -> None:
+        self.line = QGraphicsLineItem(0, 0, self.dx, self.dy)
 
         pen = QPen()
         pen.setWidth(10)
         pen.setColor(QColor(0, 0, 0, 50))
 
-        if HubZoneType.PRIORITY in [hub_a.zone, hub_b.zone]:
-            pen.setStyle(Qt.PenStyle.DashLine)
-        elif HubZoneType.BLOCKED in [hub_a.zone, hub_b.zone]:
+        zones = [self.hub_a.zone, self.hub_b.zone]
+
+        if HubZoneType.BLOCKED in zones:
             pen.setStyle(Qt.PenStyle.DashDotDotLine)
-        elif HubZoneType.RESTRICTED in [hub_a.zone, hub_b.zone]:
+        elif HubZoneType.RESTRICTED in zones:
             pen.setStyle(Qt.PenStyle.DotLine)
+        elif HubZoneType.PRIORITY in zones:
+            pen.setStyle(Qt.PenStyle.DashLine)
         else:
             pen.setStyle(Qt.PenStyle.SolidLine)
 
         self.line.setPen(pen)
-
         self.addToGroup(self.line)
 
-        self.setPos(hub_a.x * spacing, hub_a.y * spacing)
+    def _setup_markers(self) -> None:
+        if self.hub_a.zone == HubZoneType.RESTRICTED:
+            self._add_circle_marker(self.dx * 0.3, self.dy * 0.3)
 
-        self.setZValue(-1)
+        if self.hub_b.zone == HubZoneType.RESTRICTED:
+            self._add_circle_marker(self.dx * 0.7, self.dy * 0.7)
 
-        self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsSelectable)
-
-    def shape(self) -> QPainterPath:
-        return self.line.shape()
+    def _add_circle_marker(self, center_x: float, center_y: float) -> None:
+        offset = RESTRICTED_MARKER_SIZE / 2
+        circle = QGraphicsEllipseItem(
+            center_x - offset,
+            center_y - offset,
+            RESTRICTED_MARKER_SIZE,
+            RESTRICTED_MARKER_SIZE,
+        )
+        circle.setBrush(QBrush(QColor(0, 0, 0, 160)))
+        circle.setPen(QPen(Qt.PenStyle.NoPen))
+        self.addToGroup(circle)

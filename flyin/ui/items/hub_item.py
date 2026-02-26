@@ -8,18 +8,27 @@ from PyQt6.QtWidgets import (
 )
 
 from flyin.models.hub import HubColorType
+from flyin.ui.constants import (
+    HUB_SIZE,
+    SPACING,
+)
+from flyin.ui.helpers import UIHelper
 
 
 class HubItem(QGraphicsItemGroup):
 
-    def __init__(self, hub, size: int = 120, margin: int = 400):
+    def __init__(self, hub):
         super().__init__()
         self.hub = hub
 
-        bg_color = QColor("black")
-        brush = QBrush()
+        self._setup_shape()
+        self._setup_labels()
 
-        if hub.color == HubColorType.RAINBOW:
+        self.setPos(hub.x * SPACING, hub.y * SPACING)
+        self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsSelectable)
+
+    def _setup_shape(self) -> None:
+        if self.hub.color == HubColorType.RAINBOW:
             gradient = QConicalGradient(0, 0, 0)
             colors = [
                 "red",
@@ -30,21 +39,21 @@ class HubItem(QGraphicsItemGroup):
                 "indigo",
                 "red",
             ]
-
             for k, color in enumerate(colors):
                 gradient.setColorAt(
                     float(k) / (len(colors) - 1), QColor(color)
                 )
-
-            brush = QBrush(gradient)
-            text_color = QColor("white")
+            self.brush = QBrush(gradient)
+            self.text_color = QColor("white")
         else:
-            bg_color = QColor(hub.color)
-            brush = QBrush(bg_color)
-            text_color = self.get_contrast_color(bg_color)
+            bg_color = QColor(self.hub.color)
+            self.brush = QBrush(bg_color)
+            self.text_color = UIHelper.get_contrast_color(bg_color)
 
-        self.circle = QGraphicsEllipseItem(-size / 2, -size / 2, size, size)
-        self.circle.setBrush(brush)
+        self.circle = QGraphicsEllipseItem(
+            -HUB_SIZE / 2, -HUB_SIZE / 2, HUB_SIZE, HUB_SIZE
+        )
+        self.circle.setBrush(self.brush)
         self.circle.setPen(QPen(Qt.PenStyle.NoPen))
 
         shadow = QGraphicsDropShadowEffect()
@@ -53,38 +62,37 @@ class HubItem(QGraphicsItemGroup):
         shadow.setOffset(0, 0)
         self.circle.setGraphicsEffect(shadow)
 
+        self.addToGroup(self.circle)
+
+    def _setup_labels(self) -> None:
         font = QFont("Arial", 25, QFont.Weight.Bold)
 
-        self.name_label = QGraphicsTextItem(hub.name)
+        self.name_label = QGraphicsTextItem(self.hub.name)
         self.name_label.setFont(font)
         self.name_label.setDefaultTextColor(QColor("white"))
+        rect_name = self.name_label.boundingRect()
+        self.name_label.setPos(-rect_name.width() / 2, HUB_SIZE / 2 + 5)
 
         self.drone_label = QGraphicsTextItem(
-            f"{hub.drones} / {hub.max_drones}"
+            f"{self.hub.drones} / {self.hub.max_drones}"
         )
         self.drone_label.setFont(font)
-        self.drone_label.setDefaultTextColor(text_color)
-
-        rect_name = self.name_label.boundingRect()
-        self.name_label.setPos(-rect_name.width() / 2, size / 2 + 5)
-
+        self.drone_label.setDefaultTextColor(self.text_color)
         rect_drone = self.drone_label.boundingRect()
         self.drone_label.setPos(
             -rect_drone.width() / 2, -rect_drone.height() / 2
         )
 
-        self.addToGroup(self.circle)
         self.addToGroup(self.name_label)
         self.addToGroup(self.drone_label)
 
-        spacing = size + margin
-        self.setPos(hub.x * spacing, hub.y * spacing)
+    def get_details_html(self) -> tuple[str, list[str]]:
+        lines = [
+            f"Name: {self.hub.name}",
+            f"Zone: {self.hub.zone.value}",
+            f"Leaf: {self.hub.is_leaf}",
+            f"Drones: {self.hub.drones}",
+            f"Capacity: {self.hub.max_drones}",
+        ]
 
-        self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsSelectable)
-
-    def get_contrast_color(self, background_color: QColor) -> QColor:
-        brightness = (
-            0.299 * background_color.red() + 0.587 * background_color.green() +
-            0.114 * background_color.blue()
-        ) / 255
-        return QColor("black") if brightness > 0.5 else QColor("white")
+        return "Hub Details", lines

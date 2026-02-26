@@ -10,9 +10,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from flyin.ui.items.hub_item import HubItem
-from flyin.ui.items.link_item import LinkItem
-
 
 class MapInfoOverlay(QFrame):
 
@@ -75,36 +72,16 @@ class MapInfoOverlay(QFrame):
             self.hide()
             return
 
-        if isinstance(item, HubItem):
-            self.title_label.setText("HUB DETAILS")
-            self._set_hub_item(item)
+        if hasattr(item, "get_details_html"):
+            title, lines = item.get_details_html()  # type: ignore
+            self.title_label.setText(title)
+            self.content_label.setText(self._format_html_content(lines))
             self.show()
-        elif isinstance(item, LinkItem):
-            self.title_label.setText("LINK DETAILS")
-            self._set_link_item(item)
-            self.show()
+            self.adjustSize()
         else:
             self.hide()
 
         self.adjustSize()
-
-    def _set_hub_item(self, item: HubItem) -> None:
-        lines = [
-            f"Name: {item.hub.name}",
-            f"Zone: {item.hub.zone.value}",
-            f"Leaf: {item.hub.is_leaf}",
-            f"Drones: {item.hub.drones}",
-            f"Capacity: {item.hub.max_drones}",
-        ]
-        self.content_label.setText(self._format_html_content(lines))
-
-    def _set_link_item(self, item: LinkItem) -> None:
-        lines = [
-            f"Path: {item.hub_a.name} &#8596; {item.hub_b.name}",
-            f"Drones: {item.link.drones}",
-            f"Capacity: {item.link.max_link_capacity}",
-        ]
-        self.content_label.setText(self._format_html_content(lines))
 
     def _format_html_content(self, lines: list[str]) -> str:
         style = """
