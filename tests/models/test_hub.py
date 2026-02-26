@@ -1,7 +1,11 @@
 import pytest
 from pydantic import ValidationError
 
-from flyin.exceptions.hub import HubDuplicateLinkError, HubSelfConnectionError
+from flyin.exceptions.hub import (
+    HubDuplicateLinkError,
+    HubInsufficientCapacityError,
+    HubSelfConnectionError,
+)
 from flyin.models.hub import Hub, HubColorType, HubZoneType
 from flyin.models.link import Link
 
@@ -180,3 +184,9 @@ def test_hub_automatically_converts_numeric_strings(valid_hub_data):
     hub = Hub(**data)  # type: ignore
     assert isinstance(hub.x, int)
     assert hub.x == 10
+
+
+def test_hub_insufficient_capacity_raises_error() -> None:
+    """Verify that Hub construction fails if drones exceed max_drones."""
+    with pytest.raises(HubInsufficientCapacityError):
+        Hub(name="Overloaded", x=0, y=0, drones=15, max_drones=10)

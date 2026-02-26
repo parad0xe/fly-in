@@ -1,0 +1,26 @@
+from flyin.exceptions.base import FlyInError
+
+
+class GraphError(FlyInError):
+    """
+    Base class for all errors related to graph operations and validation.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
+    """
+
+    default_message = "An unspecified graph error occurred."
+
+
+class GraphInsufficientHubCapacityError(GraphError):
+    """
+    Error raised when a hub has insufficient capacity for incoming drones.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
+    """
+
+    default_message = (
+        "The destination hub does not have enough capacity to receive all "
+        "incoming drones."
+    )

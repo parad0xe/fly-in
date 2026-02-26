@@ -2,6 +2,7 @@ from typing import Callable, Optional
 
 import pytest
 
+from flyin.exceptions.graph import GraphInsufficientHubCapacityError
 from flyin.models.graph import Graph
 from flyin.models.hub import Hub
 from flyin.models.link import Link
@@ -48,7 +49,9 @@ def graph_factory() -> CallableGraphFactoryReturn:
     return _create_graph
 
 
-def test_iter_unique_connections_with_no_links(hubs, graph_factory) -> None:
+def test_graph_iter_unique_connections_with_no_links(
+    hubs, graph_factory
+) -> None:
     """Verify that an empty iterator is returned when no connections exist."""
     h1, h2, _ = hubs
     graph = graph_factory(h1, h2, [h1, h2])
@@ -56,7 +59,7 @@ def test_iter_unique_connections_with_no_links(hubs, graph_factory) -> None:
     assert len(connections) == 0
 
 
-def test_iter_unique_connections_preserves_uniqueness(
+def test_graph_iter_unique_connections_preserves_uniqueness(
     hubs, graph_factory
 ) -> None:
     """
@@ -88,7 +91,7 @@ def test_iter_unique_connections_preserves_uniqueness(
         ("loop", 3),
     ],
 )
-def test_iter_unique_connections_topologies(
+def test_graph_iter_unique_connections_topologies(
     hubs, graph_factory, topology, expected_count
 ):
     """Validate connection iteration across various graph structures."""
@@ -115,7 +118,7 @@ def test_iter_unique_connections_topologies(
     assert len(list(graph.iter_unique_connections())) == expected_count
 
 
-def test_iter_unique_connections_yields_correct_triplets(
+def test_graph_iter_unique_connections_yields_correct_triplets(
     hubs, graph_factory
 ) -> None:
     """Verify the structure and data of the yielded hub-hub-link triplets."""
@@ -136,7 +139,7 @@ def test_iter_unique_connections_yields_correct_triplets(
     assert (h2, h3, link_b) in result
 
 
-def test_iter_unique_connections_with_multiple_independent_links(
+def test_graph_iter_unique_connections_with_multiple_independent_links(
     hubs, graph_factory
 ) -> None:
     """Confirm all distinct links are found in a multi-node topology."""
@@ -150,3 +153,27 @@ def test_iter_unique_connections_with_multiple_independent_links(
     ids_found = {conn[2].id for conn in graph.iter_unique_connections()}
 
     assert ids_found == {link_1.id, link_2.id}
+
+
+def test_graph_fails_on_insufficient_end_capacity(graph_factory) -> None:
+    """
+    Verify that Graph construction fails if the end hub's capacity
+    is lower than the number of drones starting at the start hub.
+    """
+    h1 = Hub(name="Start", x=0, y=0, drones=10, max_drones=10)
+    h2 = Hub(name="End", x=10, y=10, drones=0, max_drones=5)
+
+    with pytest.raises(GraphInsufficientHubCapacityError):
+        graph_factory(h1, h2, [h1, h2])
+
+
+def test_graph_succeeds_on_sufficient_end_capacity(graph_factory) -> None:
+    """
+    Ensure that a Graph is successfully instantiated when the end hub
+    has enough capacity to receive all starting drones.
+    """
+    h1 = Hub(name="Start", x=0, y=0, drones=10, max_drones=10)
+    h2 = Hub(name="End", x=10, y=10, drones=0, max_drones=10)
+
+    graph = graph_factory(h1, h2, [h1, h2])
+    assert isinstance(graph, Graph)

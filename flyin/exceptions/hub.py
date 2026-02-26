@@ -38,7 +38,20 @@ class HubDuplicateLinkError(HubError):
             message: An optional custom message for the duplicate link.
         """
         msg = (
-            message
-            or f"Duplicate link detected between '{hub_a}' and '{hub_b}'."
+            message or
+            f"Duplicate link detected between '{hub_a}' and '{hub_b}'."
         )
         super().__init__(msg)
+
+
+class HubInsufficientCapacityError(HubError):
+    """
+    Error raised when a hub has insufficient capacity for incoming drones.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
+    """
+
+    default_message = (
+        "The hub does not have enough capacity to receive all incoming drones."
+    )

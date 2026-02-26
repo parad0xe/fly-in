@@ -147,6 +147,8 @@ class GraphParser:
 
         if hub_type == "start":
             payload["drones"] = self.nb_drones
+            if "max_drones" not in payload:
+                payload["max_drones"] = self.nb_drones
 
         hub = Hub(**payload)
         logger.debug(f"Hub ({hub_type}) '{hub.name}' created.")
@@ -160,9 +162,8 @@ class GraphParser:
 
         self.hubs[hub.name] = hub
 
-    def _parse_connection(
-        self, lineno: int, data: str
-    ) -> tuple[Hub, Hub, Link]:
+    def _parse_connection(self, lineno: int,
+                          data: str) -> tuple[Hub, Hub, Link]:
         """
         Extracts connection details and validates hub existence.
 
@@ -234,9 +235,8 @@ class GraphParser:
 
         return payload
 
-    def _parse_metadata(
-        self, lineno: int, metadata_str: str
-    ) -> dict[str, Any]:
+    def _parse_metadata(self, lineno: int,
+                        metadata_str: str) -> dict[str, Any]:
         """
         Converts metadata string [k=v ...] into a dictionary.
 

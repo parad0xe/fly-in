@@ -7,7 +7,11 @@ from typing import Any
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import Self
 
-from flyin.exceptions.hub import HubDuplicateLinkError, HubSelfConnectionError
+from flyin.exceptions.hub import (
+    HubDuplicateLinkError,
+    HubInsufficientCapacityError,
+    HubSelfConnectionError,
+)
 from flyin.models.link import Link
 
 
@@ -110,6 +114,9 @@ class Hub(BaseModel):
         for hub, _ in self.connections:
             if hub.name == self.name:
                 raise HubSelfConnectionError()
+
+        if self.drones > self.max_drones:
+            raise HubInsufficientCapacityError()
 
         if len(self.connections) > 1:
             self.is_leaf = False
