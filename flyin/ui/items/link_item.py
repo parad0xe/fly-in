@@ -1,3 +1,5 @@
+import math
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QBrush, QColor, QPainterPath, QPen
 from PyQt6.QtWidgets import (
@@ -8,7 +10,11 @@ from PyQt6.QtWidgets import (
 
 from flyin.models.hub import Hub, HubZoneType
 from flyin.models.link import Link
-from flyin.ui.constants import HUB_SPACING, LINK_RESTRICTED_MARKER_SIZE
+from flyin.ui.constants import (
+    HUB_SPACING,
+    LINK_RESTRICTED_MARKER_DISTANCE,
+    LINK_RESTRICTED_MARKER_SIZE,
+)
 
 
 class LinkItem(QGraphicsItemGroup):
@@ -64,11 +70,19 @@ class LinkItem(QGraphicsItemGroup):
         self.addToGroup(self.line)
 
     def _setup_markers(self) -> None:
+        length = math.hypot(self.dx, self.dy)
+
+        nx = self.dx / length
+        ny = self.dy / length
+
+        offset_x = nx * LINK_RESTRICTED_MARKER_DISTANCE
+        offset_y = ny * LINK_RESTRICTED_MARKER_DISTANCE
+
         if self.hub_a.zone == HubZoneType.RESTRICTED:
-            self._add_circle_marker(self.dx * 0.3, self.dy * 0.3)
+            self._add_circle_marker(offset_x, offset_y)
 
         if self.hub_b.zone == HubZoneType.RESTRICTED:
-            self._add_circle_marker(self.dx * 0.7, self.dy * 0.7)
+            self._add_circle_marker(self.dx - offset_x, self.dy - offset_y)
 
     def _add_circle_marker(self, center_x: float, center_y: float) -> None:
         offset = LINK_RESTRICTED_MARKER_SIZE / 2

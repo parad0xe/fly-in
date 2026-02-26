@@ -64,7 +64,7 @@ class MapDetailsOverlay(QFrame):
         layout.addWidget(self.title_label)
         layout.addWidget(self.content_label)
 
-        self.setFixedWidth(250)
+        self.setFixedWidth(350)
         self.hide()
 
     def set_item(self, item: Optional[QGraphicsItem] = None) -> None:
