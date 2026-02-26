@@ -1,15 +1,12 @@
 import logging
 
-import arcade
-from rich.console import Console
-from rich.table import Table
+from PyQt6.QtWidgets import QApplication
 
 from flyin.arguments import Args
 from flyin.exceptions.base import FlyInError
 from flyin.io.file_loader import GraphFileLoader
 from flyin.logging import LoggingSystem
-from flyin.models.graph import Graph
-from flyin.renderer.window import GraphWindow
+from flyin.ui.window import GraphWindow
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -31,52 +28,13 @@ def main() -> None:
         logger.exception(e)
         exit(2)
 
-    GraphWindow.load(graph)
-
-    arcade.run()
+    app = QApplication([])
+    window = GraphWindow(graph)
+    window.show()
+    app.exec()
     # render graph
     # update graph (+render graph)
     # create solutions
-    # print_graph_summary(graph)
-
-
-def print_graph_summary(graph: Graph) -> None:
-    """Display the graph structure and metadata in a terminal table."""
-    console = Console()
-
-    # Information générale sur les points d'entrée/sortie
-    console.print(f"[bold green]Start Hub:[/] {graph.start_hub.name}")
-    console.print(f"[bold red]End Hub:[/] {graph.end_hub.name}\n")
-
-    table = Table(
-        title="Network Nodes", show_header=True, header_style="bold cyan"
-    )
-    table.add_column("Hub")
-    table.add_column("Pos (X,Y)")
-    table.add_column("Type")
-    table.add_column("Connections")
-
-    for hub in graph.hubs:
-        # Formatage des connexions : 'Voisin (Capacité)'
-        conns = ", ".join(
-            [
-                (
-                    f"{hub.name} <-> {peer.name} (drone: {link.drones}) "
-                    "(max: {link.max_link_capacity})"
-                )
-                for peer, link in hub.connections
-            ]
-        )
-
-        node_type = "Leaf" if hub.is_leaf else "Node"
-        table.add_row(
-            f"{hub.name} (drones: {hub.drones}) (max: {hub.max_drones})",
-            f"{hub.x},{hub.y}",
-            node_type,
-            conns,
-        )
-
-    console.print(table)
 
 
 if __name__ == "__main__":
