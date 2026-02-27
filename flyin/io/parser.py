@@ -149,6 +149,9 @@ class GraphParser:
             payload["drones"] = self.nb_drones
             if "max_drones" not in payload:
                 payload["max_drones"] = self.nb_drones
+        elif hub_type == "end":
+            if "max_drones" not in payload:
+                payload["max_drones"] = self.nb_drones
 
         hub = Hub(**payload)
         logger.debug(f"Hub ({hub_type}) '{hub.name}' created.")
