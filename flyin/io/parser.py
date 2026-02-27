@@ -31,7 +31,7 @@ class GraphParser:
     META_SEP = "="
 
     HUB_PATTERN = re.compile(
-        r"^\s*([a-z][\w-]*)\s*(-?\d+)\s*(-?\d+)\s*(?:\[\s*(.*)\s*\])?\s*$",
+        r"^\s*([a-z][\w]*)\s*(-?\d+)\s*(-?\d+)\s*(?:\[\s*(.*)\s*\])?\s*$",
         re.I,
     )
     CONNECTION_PATTERN = re.compile(
@@ -224,11 +224,6 @@ class GraphParser:
             name, x, y, metadata_str = match.groups()
         else:
             raise ParserError(lineno, "Invalid hub format: 'name x y'.")
-
-        if "-" in name:
-            raise ParserError(
-                lineno, f"Invalid hub name <{name}>: invalid char <->."
-            )
 
         payload: dict[str, Any] = {"name": name, "x": x, "y": y}
 

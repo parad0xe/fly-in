@@ -48,7 +48,18 @@ def test_load_validation_error(tmp_path):
     invalid_file = tmp_path / "invalid.txt"
     content = "nb_drones: 1\nstart_hub: A 0 0"
     invalid_file.write_text(content)
+    with patch("flyin.io.parser.GraphParser.parse_lines", return_value={}):
+        with pytest.raises(LoaderValidationError):
+            GraphFileLoader.load(str(invalid_file))
 
+    content = "nb_drones: 1\nend_hub: A 0 0"
+    invalid_file.write_text(content)
+    with patch("flyin.io.parser.GraphParser.parse_lines", return_value={}):
+        with pytest.raises(LoaderValidationError):
+            GraphFileLoader.load(str(invalid_file))
+
+    content = "nb_drones: 1"
+    invalid_file.write_text(content)
     with patch("flyin.io.parser.GraphParser.parse_lines", return_value={}):
         with pytest.raises(LoaderValidationError):
             GraphFileLoader.load(str(invalid_file))

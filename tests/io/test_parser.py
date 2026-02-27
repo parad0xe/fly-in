@@ -75,7 +75,7 @@ def test_parser_validates_hub_format(parser):
 def test_parser_prevents_hub_names_with_hyphens(parser):
     """Verify that hub names containing hyphens are rejected."""
     lines = ["nb_drones: 1", "hub: Invalid-Name 0 0"]
-    with pytest.raises(ParserError, match="invalid char <->"):
+    with pytest.raises(ParserError, match="Invalid hub format"):
         parser.parse_lines(lines)
 
 
