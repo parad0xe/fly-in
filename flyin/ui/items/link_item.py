@@ -52,7 +52,7 @@ class LinkItem(QGraphicsItemGroup):
         self.line = QGraphicsLineItem(0, 0, self.dx, self.dy)
 
         pen = QPen()
-        pen.setWidth(10)
+        pen.setWidth(min(5 * self.link.max_link_capacity + 5, 40))
         pen.setColor(QColor(0, 0, 0, 50))
 
         zones = [self.hub_a.zone, self.hub_b.zone]
