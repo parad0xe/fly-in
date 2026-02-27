@@ -1,5 +1,7 @@
 """
 
+N = Vextex count
+
 h: int = height
 f: int = flow
 u: int = capacity
@@ -15,7 +17,8 @@ residual_capacity = u(e) - f(e)
 αf(v): int = f_in(v) - f_out(v) = excess
 
 Initialization:
-    h(s) = nb_drones
+    h(s) = N
+
     h(t) = 0
     h(v) = 0
 
