@@ -6,7 +6,7 @@ from flyin.exceptions.hub import (
     HubInsufficientCapacityError,
     HubSelfConnectionError,
 )
-from flyin.models.hub import Hub, HubColorType, HubZoneType
+from flyin.models.hub import Hub, HubZoneType
 from flyin.models.link import Link
 
 
@@ -55,13 +55,10 @@ def test_hub_instantiation_applies_specified_or_default_zones(
     assert hub.max_drones == 1
 
 
-def test_hub_supports_enum_and_null_colors(valid_hub_data):
+def test_hub_supports_upper_colors(valid_hub_data):
     """Validate color handling for Enum members and null values."""
-    hub = Hub(**valid_hub_data, color=HubColorType.BLUE)
-    assert hub.color == HubColorType.BLUE
-
-    hub.color = None
-    assert Hub(**valid_hub_data, color=None).color is None
+    hub = Hub(**valid_hub_data, color="BLUE")
+    assert hub.color == "blue"
 
 
 @pytest.mark.parametrize("name", ["", "1Hub", "_hub", " hub", "hub-a"])

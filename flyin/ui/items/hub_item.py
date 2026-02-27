@@ -1,3 +1,5 @@
+import logging
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QBrush, QColor, QConicalGradient, QFont, QPen
 from PyQt6.QtWidgets import (
@@ -7,13 +9,15 @@ from PyQt6.QtWidgets import (
     QGraphicsTextItem,
 )
 
-from flyin.models.hub import Hub, HubColorType
+from flyin.models.hub import Hub
 from flyin.ui.bus_events import UIBus
 from flyin.ui.constants import (
     HUB_SIZE,
     HUB_SPACING,
 )
 from flyin.ui.helpers import UIHelper
+
+logger = logging.getLogger(__name__)
 
 
 class HubItem(QGraphicsItemGroup):
@@ -53,7 +57,7 @@ class HubItem(QGraphicsItemGroup):
         )
 
     def _setup_shape(self) -> None:
-        if self.hub.color == HubColorType.RAINBOW:
+        if self.hub.color == "rainbow":
             gradient = QConicalGradient(0, 0, 0)
             colors = [
                 "red",
@@ -72,6 +76,13 @@ class HubItem(QGraphicsItemGroup):
             self.text_color = QColor("white")
         else:
             bg_color = QColor(self.hub.color)
+            if not bg_color.isValid():
+                bg_color = QColor("gray")
+                logger.warning(
+                    f"Invalid color <{self.hub.color}> "
+                    f"for hub <{self.hub.name}>, "
+                    "use gray as fallback"
+                )
             self.brush = QBrush(bg_color)
             self.text_color = UIHelper.get_contrast_color(bg_color)
 

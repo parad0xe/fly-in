@@ -15,29 +15,6 @@ from flyin.exceptions.hub import (
 from flyin.models.link import Link
 
 
-class HubColorType(str, Enum):
-    """Define the available categorical colors for hub identification."""
-
-    RED = "red"
-    BLUE = "blue"
-    GREEN = "green"
-    GRAY = "gray"
-    YELLOW = "yellow"
-    ORANGE = "orange"
-    PURPLE = "purple"
-    BLACK = "black"
-    BROWN = "brown"
-    MAROON = "maroon"
-    GOLD = "gold"
-    DARK_RED = "darkred"
-    VIOLET = "violet"
-    CRIMSON = "crimson"
-    RAINBOW = "rainbow"
-    CYAN = "cyan"
-    LIME = "lime"
-    MAGENTA = "magenta"
-
-
 class HubZoneType(str, Enum):
     """
     Specify the operational security and access levels for a hub location.
@@ -79,7 +56,7 @@ class Hub(BaseModel):
     y: int
 
     zone: HubZoneType = HubZoneType.NORMAL
-    color: HubColorType | None = None
+    color: str = "gray"
     drones: int = Field(default=0, ge=0)
     max_drones: int = Field(default=1, ge=0)
 
@@ -90,6 +67,8 @@ class Hub(BaseModel):
     def model_post_init(self, context: Any) -> None:
         """Execute integrity checks after model initialization."""
         self.ensure_integrity()
+
+        self.color = self.color.lower()
         return super().model_post_init(context)
 
     def ensure_integrity(self) -> Self:

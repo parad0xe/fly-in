@@ -20,7 +20,7 @@ def test_parser_handles_valid_input(parser):
     lines = [
         "nb_drones: 10",
         "start_hub: Alpha 0 0",
-        "end_hub: Beta 10 10 [color=red]",
+        "end_hub: Beta 10 10 [color=ReD]",
         "hub: Gamma -5 5",
         "connection: Alpha-Gamma [max_link_capacity=5]",
         "connection: Gamma-Beta",
@@ -29,7 +29,7 @@ def test_parser_handles_valid_input(parser):
 
     assert result["start_hub"].name == "Alpha"
     assert result["start_hub"].drones == 10
-    assert result["end_hub"].color.value == "red"
+    assert result["end_hub"].color == "red"
     assert len(result["hubs"]) == 3
     assert len(result["links"]) == 2
 
