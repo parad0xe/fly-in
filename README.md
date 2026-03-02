@@ -17,5 +17,7 @@
 
 [Web: LaCAM: Search-Based Algorithm for Quick Multi-Agent Pathfinding](https://ojs.aaai.org/index.php/AAAI/article/view/26377)\
 [Pdf: LaCAM: Improving LaCAM](https://www.ijcai.org/proceedings/2023/0028.pdf)\
-[Pdf: Engineering LaCAM](https://www.ifaamas.org/Proceedings/aamas2024/pdfs/p1501.pdf)
+[Pdf: Engineering LaCAM](https://www.ifaamas.org/Proceedings/aamas2024/pdfs/p1501.pdf)\
 [Pdf: Minimizing Makespan with LaCAM](https://openreview.net/pdf?id=ppr77dTFWR)
+
+[Pdf: Priority Inheritance with Backtracking (PIBT) for Iterative MAPF](https://www.ijcai.org/proceedings/2019/0076.pdf)
