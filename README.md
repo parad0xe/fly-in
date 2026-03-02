@@ -21,3 +21,5 @@
 [Pdf: Minimizing Makespan with LaCAM](https://openreview.net/pdf?id=ppr77dTFWR)
 
 [Pdf: Priority Inheritance with Backtracking (PIBT) for Iterative MAPF](https://www.ijcai.org/proceedings/2019/0076.pdf)
+
+[Youtube: Recherche heuristique A\*](https://youtu.be/8_dGurEKXDk)
