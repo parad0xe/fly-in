@@ -13,8 +13,9 @@
 [Pdf: A Second Course: The Push-Relabel Algorithm](https://timroughgarden.org/w16/l/l3.pdf)\
 [Youtube: A Second Course: The Push-Relabel Algorithm](https://www.youtube.com/watch?v=0hI89H39USg)
 
-[Web: Increasing cost tree search - MAPF](https://www.sciencedirect.com/science/article/pii/S0004370212001543)
-[Pdf: Traffic flow optimisation for Lifelong - MAPF](https://harabor.net/data/papers/chls-aaai24-tfoflmapf.pdf)
+[Web: Increasing cost tree search - MAPF](https://www.sciencedirect.com/science/article/pii/S0004370212001543)\
+[Pdf: Traffic flow optimisation for Lifelong - MAPF](https://harabor.net/data/papers/chls-aaai24-tfoflmapf.pdf)\
+[Pdf: Conflict-based search for optimal MAPF](https://www.sciencedirect.com/science/article/pii/S0004370214001386)
 
 [Web: LaCAM: Search-Based Algorithm for Quick Multi-Agent Pathfinding](https://ojs.aaai.org/index.php/AAAI/article/view/26377)\
 [Pdf: LaCAM: Improving LaCAM](https://www.ijcai.org/proceedings/2023/0028.pdf)\
