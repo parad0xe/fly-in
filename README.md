@@ -15,13 +15,13 @@
 
 [Web: Increasing cost tree search - MAPF](https://www.sciencedirect.com/science/article/pii/S0004370212001543)\
 [Pdf: Traffic flow optimisation for Lifelong - MAPF](https://harabor.net/data/papers/chls-aaai24-tfoflmapf.pdf)\
-[Pdf: Conflict-based search for optimal MAPF](https://www.sciencedirect.com/science/article/pii/S0004370214001386)
+[Pdf: Conflict-based search for optimal MAPF](https://www.sciencedirect.com/science/article/pii/S0004370214001386)\
+[Pdf: Priority Inheritance with Backtracking (PIBT) for Iterative MAPF](https://www.ijcai.org/proceedings/2019/0076.pdf)
 
 [Web: LaCAM: Search-Based Algorithm for Quick Multi-Agent Pathfinding](https://ojs.aaai.org/index.php/AAAI/article/view/26377)\
 [Pdf: LaCAM: Improving LaCAM](https://www.ijcai.org/proceedings/2023/0028.pdf)\
 [Pdf: Engineering LaCAM](https://www.ifaamas.org/Proceedings/aamas2024/pdfs/p1501.pdf)\
 [Pdf: Minimizing Makespan with LaCAM](https://openreview.net/pdf?id=ppr77dTFWR)
 
-[Pdf: Priority Inheritance with Backtracking (PIBT) for Iterative MAPF](https://www.ijcai.org/proceedings/2019/0076.pdf)
 
 [Youtube: Recherche heuristique A\*](https://youtu.be/8_dGurEKXDk)
