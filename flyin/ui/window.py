@@ -6,7 +6,6 @@ from PyQt6.QtGui import QKeyEvent
 from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QWidget
 
 from flyin.models.graph import Graph
-from flyin.solver.lacam import Lacam
 from flyin.solver.types import Config
 from flyin.ui.bus_events import UIBus
 from flyin.ui.constants import ANIMATION_DURATION
@@ -21,7 +20,7 @@ class GraphWindow(QMainWindow):
     Main application window displaying the drone network graph.
     """
 
-    def __init__(self, graph: Graph) -> None:
+    def __init__(self, graph: Graph, solution: Optional[list[Config]]) -> None:
         """
         Initializes the main window and sets up the layout.
 
@@ -31,7 +30,7 @@ class GraphWindow(QMainWindow):
         super().__init__()
 
         self.graph: Graph = graph
-        self.solution: Optional[list[Config]] = None
+        self.solution: Optional[list[Config]] = solution
         self.solution_index: int = 0
 
         self.setWindowTitle("Fly-In")
@@ -42,7 +41,7 @@ class GraphWindow(QMainWindow):
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._on_timeout)
 
-        self.start()
+        self.initialize()
 
     def _setup_ui(self) -> None:
         """
@@ -63,20 +62,10 @@ class GraphWindow(QMainWindow):
 
         central_widget.setLayout(main_layout)
 
-    def start(self) -> None:
+    def initialize(self) -> None:
         """
-        Computes the Lacam solution and starts the visualizer.
+        Initializes the visualizer.
         """
-        config_start = (self.graph.start_hub,) * self.graph.nb_drones
-        config_end = (self.graph.end_hub,) * self.graph.nb_drones
-
-        UIBus.get().info.emit("Solving..")
-        self.solution = Lacam.solve(
-            graph=self.graph,
-            config_start=config_start,
-            config_end=config_end,
-        )
-
         if not self.solution:
             UIBus.get().info.emit("No solution founded")
         else:
@@ -89,7 +78,8 @@ class GraphWindow(QMainWindow):
                             f"D{agent_index}-{config[agent_index].name}",
                             end=" ",
                         )
-                        if config[agent_index] == config_end[agent_index]:
+                        if (config[agent_index] == self.solution[
+                                len(self.solution) - 1][agent_index]):
                             untracked.add(agent_index)
                 print("")
 
