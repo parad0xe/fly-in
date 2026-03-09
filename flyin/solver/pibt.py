@@ -7,7 +7,7 @@ from flyin.models.graph import Graph
 from flyin.models.hub import Hub, HubZoneType
 from flyin.models.link import Link
 from flyin.solver.dist_table import DistanceTable
-from flyin.solver.types import Config, WipConfig
+from flyin.solver.types import Config, GraphItem, WipConfig
 from flyin.solver.utils import HighLevelNode, LowLevelNode, Utils
 
 
@@ -296,7 +296,12 @@ class Pibt:
 
         return projected_count <= hub_to.max_drones
 
-    def _get_moves(self, agent_index: int, hub_from: Hub, can_wait: bool):
+    def _get_moves(
+        self,
+        agent_index: int,
+        hub_from: Hub,
+        can_wait: bool,
+    ) -> list[GraphItem]:
         """
         Retrieve valid potential moves for a given agent.
 
