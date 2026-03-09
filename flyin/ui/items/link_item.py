@@ -1,9 +1,6 @@
-import math
-
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QBrush, QColor, QPainterPath, QPen
+from PyQt6.QtGui import QColor, QPainterPath, QPen
 from PyQt6.QtWidgets import (
-    QGraphicsEllipseItem,
     QGraphicsItemGroup,
     QGraphicsLineItem,
 )
@@ -12,14 +9,25 @@ from flyin.models.hub import Hub, HubZoneType
 from flyin.models.link import Link
 from flyin.ui.constants import (
     HUB_SPACING,
-    LINK_RESTRICTED_MARKER_DISTANCE,
-    LINK_RESTRICTED_MARKER_SIZE,
+    LINK_BASE_WIDTH,
+    LINK_MAX_WIDTH,
+    LINK_STYLE_MAP,
+    LINK_Z_VALUE,
 )
 
 
 class LinkItem(QGraphicsItemGroup):
+    """Visual representation of a graphical link between two hubs."""
 
     def __init__(self, hub_a: Hub, hub_b: Hub, link: Link) -> None:
+        """
+        Initialize the link graphical item.
+
+        Args:
+            hub_a: The starting hub instance.
+            hub_b: The ending hub instance.
+            link: The link data model instance.
+        """
         super().__init__()
 
         self.hub_a: Hub = hub_a
@@ -30,16 +38,27 @@ class LinkItem(QGraphicsItemGroup):
         self.dy = (hub_b.y - hub_a.y) * HUB_SPACING
 
         self._setup_line()
-        self._setup_markers()
 
         self.setPos(hub_a.x * HUB_SPACING, hub_a.y * HUB_SPACING)
-        self.setZValue(-1)
+        self.setZValue(LINK_Z_VALUE)
         self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsSelectable)
 
     def shape(self) -> QPainterPath:
+        """
+        Return the exact shape of the link item.
+
+        Returns:
+            The collision shape of the graphical line.
+        """
         return self.line.shape()
 
     def get_details_html(self) -> tuple[str, list[str]]:
+        """
+        Get the HTML formatted details of the link.
+
+        Returns:
+            Title string and a list of detail lines.
+        """
         lines = [
             f"Path: {self.hub_a.name} &#8596; {self.hub_b.name}",
             f"Drones: {self.link.drones}",
@@ -49,49 +68,40 @@ class LinkItem(QGraphicsItemGroup):
         return "Link Details", lines
 
     def _setup_line(self) -> None:
+        """
+        Configure and add the graphical line to the group.
+        """
         self.line = QGraphicsLineItem(0, 0, self.dx, self.dy)
 
         pen = QPen()
-        pen.setWidth(min(5 * self.link.max_link_capacity + 5, 40))
+        line_width = min(
+            LINK_BASE_WIDTH * self.link.max_link_capacity + LINK_BASE_WIDTH,
+            LINK_MAX_WIDTH,
+        )
+        pen.setWidth(line_width)
         pen.setColor(QColor(0, 0, 0, 50))
 
-        zones = [self.hub_a.zone, self.hub_b.zone]
-
-        if HubZoneType.BLOCKED in zones:
-            pen.setStyle(Qt.PenStyle.DashDotDotLine)
-        elif HubZoneType.RESTRICTED in zones:
-            pen.setStyle(Qt.PenStyle.DotLine)
-        elif HubZoneType.PRIORITY in zones:
-            pen.setStyle(Qt.PenStyle.DashLine)
-        else:
-            pen.setStyle(Qt.PenStyle.SolidLine)
+        dominant_zone = self._get_dominant_zone()
+        pen.setStyle(LINK_STYLE_MAP.get(dominant_zone, Qt.PenStyle.SolidLine))
 
         self.line.setPen(pen)
         self.addToGroup(self.line)
 
-    def _setup_markers(self) -> None:
-        length = math.hypot(self.dx, self.dy)
+    def _get_dominant_zone(self) -> HubZoneType:
+        """
+        Determine the most restrictive zone type.
 
-        nx = self.dx / length
-        ny = self.dy / length
+        Returns:
+            The dominant zone for styling the link.
+        """
+        zones = {self.hub_a.zone, self.hub_b.zone}
 
-        offset_x = nx * LINK_RESTRICTED_MARKER_DISTANCE
-        offset_y = ny * LINK_RESTRICTED_MARKER_DISTANCE
+        for zone_type in [
+                HubZoneType.BLOCKED,
+                HubZoneType.RESTRICTED,
+                HubZoneType.PRIORITY,
+        ]:
+            if zone_type in zones:
+                return zone_type
 
-        if self.hub_a.zone == HubZoneType.RESTRICTED:
-            self._add_circle_marker(offset_x, offset_y)
-
-        if self.hub_b.zone == HubZoneType.RESTRICTED:
-            self._add_circle_marker(self.dx - offset_x, self.dy - offset_y)
-
-    def _add_circle_marker(self, center_x: float, center_y: float) -> None:
-        offset = LINK_RESTRICTED_MARKER_SIZE / 2
-        circle = QGraphicsEllipseItem(
-            center_x - offset,
-            center_y - offset,
-            LINK_RESTRICTED_MARKER_SIZE,
-            LINK_RESTRICTED_MARKER_SIZE,
-        )
-        circle.setBrush(QBrush(QColor(0, 0, 0, 160)))
-        circle.setPen(QPen(Qt.PenStyle.NoPen))
-        self.addToGroup(circle)
+        return HubZoneType.NORMAL

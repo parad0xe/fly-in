@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
     QGraphicsTextItem,
 )
 
-from flyin.models.hub import Hub
+from flyin.models.hub import Hub, HubZoneType
 from flyin.ui.bus_events import UIBus
 from flyin.ui.constants import (
     HUB_SIZE,
@@ -21,12 +21,28 @@ logger = logging.getLogger(__name__)
 
 
 class HubItem(QGraphicsItemGroup):
-    name_label: QGraphicsTextItem
+    """
+    Visual representation of a hub node within the graphics scene.
+
+    Attributes:
+        name_label: Optional text item displaying the hub's name.
+        drone_label: Text item showing the current and max drone count.
+    """
+
+    name_label: QGraphicsTextItem | None
     drone_label: QGraphicsTextItem
 
     def __init__(self, hub: Hub) -> None:
+        """
+        Initializes the hub item and binds it to the event bus.
+
+        Args:
+            hub: The Hub data model associated with this visual item.
+        """
         super().__init__()
         self.hub = hub
+
+        self.size = HUB_SIZE * 0.5 if hub.is_dummy else HUB_SIZE
 
         self._setup_shape()
         self._setup_labels()
@@ -34,13 +50,19 @@ class HubItem(QGraphicsItemGroup):
         self.setPos(hub.x * HUB_SPACING, hub.y * HUB_SPACING)
         self.setFlag(QGraphicsItemGroup.GraphicsItemFlag.ItemIsSelectable)
 
-        UIBus.get().graph_updated.connect(self._refresh)
+        UIBus.get().hub_updated.connect(self._refresh)
 
     def get_details_html(self) -> tuple[str, list[str]]:
+        """
+        Returns formatted HTML details for the overlay widget.
+
+        Returns:
+            A tuple containing the title and a list of detail lines.
+        """
         lines = [
             f"Name: {self.hub.name}",
             f"Zone: {self.hub.zone.value}",
-            f"Leaf: {self.hub.is_leaf}",
+            f"Dummy: {self.hub.is_dummy}",
             f"Drones: {self.hub.drones}",
             f"Capacity: {self.hub.max_drones}",
         ]
@@ -48,6 +70,7 @@ class HubItem(QGraphicsItemGroup):
         return "Hub Details", lines
 
     def _refresh(self) -> None:
+        """Updates the drone count label text dynamically."""
         new_text = f"{self.hub.drones} / {self.hub.max_drones}"
         self.drone_label.setPlainText(new_text)
 
@@ -57,6 +80,7 @@ class HubItem(QGraphicsItemGroup):
         )
 
     def _setup_shape(self) -> None:
+        """Configures the background color, gradient, and shadow."""
         if self.hub.color == "rainbow":
             gradient = QConicalGradient(0, 0, 0)
             colors = [
@@ -87,10 +111,16 @@ class HubItem(QGraphicsItemGroup):
             self.text_color = UIHelper.get_contrast_color(bg_color)
 
         self.circle = QGraphicsEllipseItem(
-            -HUB_SIZE / 2, -HUB_SIZE / 2, HUB_SIZE, HUB_SIZE
+            -self.size / 2, -self.size / 2, self.size, self.size
         )
         self.circle.setBrush(self.brush)
-        self.circle.setPen(QPen(Qt.PenStyle.NoPen))
+        if self.hub.zone == HubZoneType.BLOCKED:
+            pen = QPen(Qt.PenStyle.DashLine)
+            pen.setWidth(10)
+            pen.setColor(UIHelper.get_outline_color(bg_color))
+            self.circle.setPen(pen)
+        else:
+            self.circle.setPen(QPen(Qt.PenStyle.NoPen))
 
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(15)
@@ -101,13 +131,18 @@ class HubItem(QGraphicsItemGroup):
         self.addToGroup(self.circle)
 
     def _setup_labels(self) -> None:
+        """Creates and positions the text labels for the hub."""
         font = QFont("Arial", 25, QFont.Weight.Bold)
 
-        self.name_label = QGraphicsTextItem(self.hub.name)
-        self.name_label.setFont(font)
-        self.name_label.setDefaultTextColor(QColor("white"))
-        rect_name = self.name_label.boundingRect()
-        self.name_label.setPos(-rect_name.width() / 2, HUB_SIZE / 2 + 5)
+        if not self.hub.is_dummy:
+            self.name_label = QGraphicsTextItem(self.hub.name)
+            self.name_label.setFont(font)
+            self.name_label.setDefaultTextColor(QColor("white"))
+            rect_name = self.name_label.boundingRect()
+            self.name_label.setPos(-rect_name.width() / 2, self.size / 2 + 5)
+            self.addToGroup(self.name_label)
+        else:
+            self.name_label = None
 
         self.drone_label = QGraphicsTextItem(
             f"{self.hub.drones} / {self.hub.max_drones}"
@@ -119,5 +154,6 @@ class HubItem(QGraphicsItemGroup):
             -rect_drone.width() / 2, -rect_drone.height() / 2
         )
 
-        self.addToGroup(self.name_label)
+        if self.name_label is not None:
+            self.addToGroup(self.name_label)
         self.addToGroup(self.drone_label)

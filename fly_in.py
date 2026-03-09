@@ -32,9 +32,6 @@ def main() -> None:
     window = GraphWindow(graph)
     window.show()
     app.exec()
-    # render graph
-    # update graph (+render graph)
-    # create solutions
 
 
 if __name__ == "__main__":

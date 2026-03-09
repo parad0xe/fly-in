@@ -5,8 +5,17 @@ from flyin.ui.bus_events import UIBus
 
 
 class HeaderWidget(QFrame):
+    """
+    Top banner displaying global graph statistics and information.
+    """
 
     def __init__(self, graph: Graph) -> None:
+        """
+        Initialize the header widget with graph statistics.
+
+        Args:
+            graph: The graph model instance to extract stats from.
+        """
         super().__init__()
 
         self.graph: Graph = graph
@@ -33,15 +42,24 @@ class HeaderWidget(QFrame):
 
         self.nodes_label = QLabel(f"Nodes: {len(graph.hubs)}")
         self.links_label = QLabel(f"Links: {len(graph.links)}")
+        self.drones_label = QLabel(f"Drones: {graph.nb_drones}")
+        self.info_label = QLabel("")
 
         layout.addWidget(self.nodes_label)
         layout.addWidget(self.links_label)
+        layout.addWidget(self.drones_label)
         layout.addStretch()
+        layout.addWidget(self.info_label)
 
         self.setLayout(layout)
 
-        UIBus.get().graph_updated.connect(self._refresh)
+        UIBus.get().info.connect(self._refresh)
 
-    def _refresh(self) -> None:
-        self.nodes_label.setText(f"Nodes: {len(self.graph.hubs)}")
-        self.links_label.setText(f"Links: {len(self.graph.links)}")
+    def _refresh(self, text: str) -> None:
+        """
+        Update the informational text displayed in the header.
+
+        Args:
+            text: The new string to display in the info label.
+        """
+        self.info_label.setText(f"{text}")

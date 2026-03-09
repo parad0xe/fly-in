@@ -10,8 +10,17 @@ from flyin.ui.items.link_item import LinkItem
 
 
 class MapScene(QGraphicsScene):
+    """
+    Graphical scene managing and displaying graph hubs and links.
+    """
 
-    def __init__(self, graph: Graph):
+    def __init__(self, graph: Graph) -> None:
+        """
+        Initialize the map scene with graph data.
+
+        Args:
+            graph: The graph model containing hubs and connections.
+        """
         super().__init__()
 
         self.start_hub_item: Optional[HubItem] = None
@@ -29,6 +38,9 @@ class MapScene(QGraphicsScene):
         self.update_bounds()
 
     def update_bounds(self) -> None:
+        """
+        Recalculate and update the scene boundaries with padding.
+        """
         items_rect = self.itemsBoundingRect()
 
         new_rect = items_rect.adjusted(

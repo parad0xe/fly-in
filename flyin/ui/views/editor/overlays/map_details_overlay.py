@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional, cast
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
@@ -12,8 +12,17 @@ from PyQt6.QtWidgets import (
 
 
 class MapDetailsOverlay(QFrame):
+    """
+    Overlay frame to display details of selected map items.
+    """
 
     def __init__(self, parent: QWidget) -> None:
+        """
+        Initializes the map details overlay UI component.
+
+        Args:
+            parent: The parent widget to attach this overlay to.
+        """
         super().__init__(parent)
 
         self.setStyleSheet(
@@ -68,12 +77,18 @@ class MapDetailsOverlay(QFrame):
         self.hide()
 
     def set_item(self, item: Optional[QGraphicsItem] = None) -> None:
+        """
+        Updates the overlay content based on the selected graphics item.
+
+        Args:
+            item: The selected graphics item, or None to hide overlay.
+        """
         if item is None:
             self.hide()
             return
 
         if hasattr(item, "get_details_html"):
-            title, lines = item.get_details_html()  # type: ignore
+            title, lines = cast(Any, item).get_details_html()
             self.title_label.setText(title)
             self.content_label.setText(self._format_html_content(lines))
             self.show()
@@ -82,6 +97,15 @@ class MapDetailsOverlay(QFrame):
             self.hide()
 
     def _format_html_content(self, lines: list[str]) -> str:
+        """
+        Formats a list of strings into an HTML block with spacing.
+
+        Args:
+            lines: List of text lines to wrap in HTML div tags.
+
+        Returns:
+            A formatted HTML string ready for the content label.
+        """
         style = """
             <style>
                 div {
