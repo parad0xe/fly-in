@@ -192,8 +192,8 @@ class GraphParser:
                 "is_dummy": True,
                 "is_leaf": False,
                 "connections": [],
+                "max_drones": link.max_link_capacity,
             },
-            deep=True,
         )
 
         self.hubs[hub_dummy.name] = hub_dummy
