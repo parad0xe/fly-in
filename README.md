@@ -2,6 +2,83 @@
 
 ![ci workflow](https://github.com/parad0xe/fly-in/actions/workflows/ci.yml/badge.svg)
 
+_This project has been created as part of the 42 curriculum by nlallema_
+
+## Table of Contents
+
+- [Description](#description)
+- [Usage](#usage)
+- [Ressources](#resources)
+
+## Description
+
+
+
+## Usage
+
+To **_install_** the project virtual environment :
+
+```bash
+make install
+```
+
+To **_run_** the program :
+
+```bash
+make run ARGS="file [-v[v]]"
+```
+
+#### Available positional argumments
+
+| Arguments | Description              |
+|-----------|--------------------------|
+| file      | The path to the map file |
+
+#### Available flag options
+
+| Flags | Description        |
+|-------|--------------------|
+| -v    | Run with log INFO  |
+| -vv   | Run with log DEBUG |
+
+To run the **__tests__** :
+
+```bash
+make tests
+```
+
+To **_clean_** project environment:
+
+```bash
+make clean
+```
+
+To **_clean_** project cache:
+
+```bash
+make cache-clean
+```
+
+To check flake8 and mypy **_norms_** :
+
+```bash
+make lint
+```
+
+To check flake8 and mypy **_norms_** with **_strict_** flags :
+
+```bash
+make lint-strict
+```
+
+To run the program with the **_python debugger_** :
+
+```bash
+make debug
+```
+
+
+## Resources
 
 [Web: PyQt6](https://doc.qt.io/qtforpython-6/PySide6/)\
 [Web: Qt Matrix m11](https://doc.qt.io/qtforpython-6/PySide6/QtGui/QTransform.html#PySide6.QtGui.QTransform.m11)\
