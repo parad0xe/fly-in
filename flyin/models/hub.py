@@ -66,14 +66,12 @@ class Hub(BaseModel):
 
     zone: HubZoneType = HubZoneType.NORMAL
     color: str = "gray"
-    drones: int = Field(default=0, ge=0, init=False)
+    drones: int = Field(default=0, ge=0)
     max_drones: int = Field(default=1, ge=0)
 
-    is_dummy: bool = Field(default=False, init=False)
+    is_dummy: bool = Field(default=False)
 
-    connections: list[tuple[Hub, Link]] = Field(
-        default_factory=lambda: [], init=False
-    )
+    connections: list[tuple[Hub, Link]] = Field(default_factory=lambda: [])
 
     def __hash__(self) -> int:
         return hash((self.x, self.y, self.name))

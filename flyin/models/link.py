@@ -22,10 +22,8 @@ class Link(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    id: int = Field(
-        default_factory=lambda: next(_id_counter), frozen=True, init=False
-    )
-    drones: int = Field(default=0, ge=0, init=False)
+    id: int = Field(default_factory=lambda: next(_id_counter), frozen=True)
+    drones: int = Field(default=0, ge=0)
     max_link_capacity: int = Field(default=1, ge=0, frozen=True)
 
     @model_validator(mode="before")
