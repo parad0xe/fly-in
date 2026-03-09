@@ -26,7 +26,7 @@ class EditorView(QGraphicsView):
 
     ZOOM_FACTOR = 0.1
     MAX_ZOOM = 1.5
-    MIN_ZOOM = 0.2
+    MIN_ZOOM = 0.1
 
     def __init__(self, graph: Graph) -> None:
         """
