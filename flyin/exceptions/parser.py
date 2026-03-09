@@ -1,3 +1,5 @@
+from pydantic import ValidationError
+
 from flyin.exceptions.base import FlyInError
 
 
@@ -38,8 +40,8 @@ class ParserMissingSeparatorError(ParserError):
             message: An optional custom message for the missing separator.
         """
         msg = (
-            message
-            or f"Required separator '{separator}' not found on this line."
+            message or
+            f"Required separator '{separator}' not found on this line."
         )
         super().__init__(lineno, msg)
 
@@ -95,4 +97,47 @@ class ParserMissingHubError(ParserError):
             message: An optional custom message for the reference error.
         """
         msg = message or f"Reference to undefined hub: '{hub_name}'."
+        super().__init__(lineno, msg)
+
+
+class ParserValidationError(ParserError):
+    """
+    Error raised when configuration data fails validation checks.
+    """
+
+    def __init__(self, lineno: int, e: ValidationError) -> None:
+        """
+        Formats and initializes validation error details.
+
+        Args:
+            lineno: The index of the line where the error occurred.
+            e: The validation error object containing a collection of failures.
+        """
+        messages: list[str] = [""]
+
+        for error in e.errors():
+            location = (
+                " -> ".join(str(loc) for loc in error["loc"])
+                if error["loc"] else "model"
+            )
+            messages.append(f"- ({location}) {error['msg']}")
+
+        super().__init__(lineno, "\n".join(messages))
+
+
+class ParserHubInsufficientCapacityError(ParserError):
+    """Error raised when a hub has insufficient capacity during parsing."""
+
+    def __init__(self, lineno: int, message: str | None = None) -> None:
+        """
+        Initialize the error for a capacity issue detected during parsing.
+
+        Args:
+            lineno: The index of the line where the error occurred.
+            message: An optional custom message for the capacity error.
+        """
+        msg = (
+            message or "The hub does not have enough capacity to "
+            "receive all incoming drones."
+        )
         super().__init__(lineno, msg)

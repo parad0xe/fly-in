@@ -5,11 +5,15 @@ import math
 import re
 from typing import Any, Callable, Iterable
 
+from pydantic import ValidationError
+
 from flyin.exceptions.parser import (
     ParserError,
+    ParserHubInsufficientCapacityError,
     ParserMissingHubError,
     ParserMissingSeparatorError,
     ParserUnhandledKeyError,
+    ParserValidationError,
 )
 from flyin.models.hub import Hub, HubZoneType
 from flyin.models.link import Link
@@ -32,11 +36,11 @@ class GraphParser:
     META_SEP = "="
 
     HUB_PATTERN = re.compile(
-        r"^\s*([a-z][\w]*)\s*(-?\d+)\s*(-?\d+)\s*(?:\[\s*(.*)\s*\])?\s*$",
+        r"^\s*([a-z][\w]*)\s*(-?\d+)\s*(-?\d+)\s*(?:\[\s*([^\[\]]*)\s*\])?\s*$",
         re.I,
     )
     CONNECTION_PATTERN = re.compile(
-        r"^\s*([a-z][\w]*)-([a-z][\w]*)\s*(?:\[\s*(.*)\s*\])?\s*$", re.I
+        r"^\s*([a-z][\w]*)-([a-z][\w]*)\s*(?:\[\s*([^\[\]]*)\s*\])?\s*$", re.I
     )
 
     def parse_lines(self, lines: Iterable[str]) -> dict[str, Any] | None:
@@ -83,14 +87,17 @@ class GraphParser:
             key, value = [s.strip() for s in line.split(self.KV_SEP, 1)]
             logger.debug(f"Line {lineno}: Processing <{line}>")
 
-            if not self.nb_drones and key != "nb_drones":
+            if self.nb_drones is None and key != "nb_drones":
                 raise ParserError(
                     lineno, "The 'nb_drones' key must be defined first."
                 )
 
             handler = self.handlers.get(key, None)
             if handler is not None:
-                handler(lineno, value)
+                try:
+                    handler(lineno, value)
+                except ValidationError as e:
+                    raise ParserValidationError(lineno, e) from e
             else:
                 raise ParserUnhandledKeyError(lineno, key)
 
@@ -116,6 +123,11 @@ class GraphParser:
             raise ParserError(
                 lineno, f"Invalid 'nb_drones' integer: '{data}'."
             ) from e
+
+        if nb_drones <= 0:
+            raise ParserError(
+                lineno, "'nb_drones' value must be greater than 0"
+            )
         self.nb_drones = nb_drones
         logger.info(f"Number of drones set to: {self.nb_drones}")
 
@@ -204,7 +216,6 @@ class GraphParser:
         payload = self._parse_hub_payload(lineno, data)
 
         if hub_type == "start":
-            payload["drones"] = self.nb_drones
             if "max_drones" not in payload:
                 payload["max_drones"] = self.nb_drones
         elif hub_type == "end":
@@ -212,6 +223,13 @@ class GraphParser:
                 payload["max_drones"] = self.nb_drones
 
         hub = Hub(**payload)
+        if hub_type == "start" and self.nb_drones is not None:
+            hub.drones = self.nb_drones
+
+        if hub_type in ["start", "end"]:
+            if self.nb_drones is not None and hub.max_drones < self.nb_drones:
+                raise ParserHubInsufficientCapacityError(lineno)
+
         logger.debug(f"Hub ({hub_type}) '{hub.name}' created.")
 
         if hub_type == "start":
@@ -243,7 +261,8 @@ class GraphParser:
             name_a, name_b, metadata_str = match.groups()
         else:
             raise ParserError(
-                lineno, "Invalid connection format: '<name1>-<name2>'."
+                lineno,
+                "Invalid connection format: '<name1>-<name2> [metadata]'.",
             )
 
         if name_a not in self.hubs:
@@ -281,7 +300,9 @@ class GraphParser:
         if match := self.HUB_PATTERN.match(data):
             name, x, y, metadata_str = match.groups()
         else:
-            raise ParserError(lineno, "Invalid hub format: 'name x y'.")
+            raise ParserError(
+                lineno, "Invalid hub format: 'name x y [metadata]'."
+            )
 
         payload: dict[str, Any] = {"name": name, "x": x, "y": y}
 

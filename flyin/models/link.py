@@ -1,7 +1,8 @@
 import itertools
-from typing import Any
+from typing import Any, ClassVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic_core import PydanticCustomError
 
 _id_counter = itertools.count(1)
 
@@ -15,24 +16,45 @@ class Link(BaseModel):
         max_link_capacity: Maximum drone capacity allowed on the link.
     """
 
+    WHITELIST: ClassVar[set[str]] = {
+        "max_link_capacity",
+    }
+
     model_config = ConfigDict(extra="forbid")
 
-    id: int = Field(default_factory=lambda: next(_id_counter), frozen=True)
-    drones: int = Field(default=0, ge=0)
+    id: int = Field(
+        default_factory=lambda: next(_id_counter), frozen=True, init=False
+    )
+    drones: int = Field(default=0, ge=0, init=False)
     max_link_capacity: int = Field(default=1, ge=0, frozen=True)
 
     @model_validator(mode="before")
     @classmethod
-    def prevent_id_injection(cls, data: Any) -> Any:
+    def force_whitelist_init(cls, data: Any) -> Any:
         """
-        Removes 'id' from input data to ensure auto-generation is used.
+        Restricts instantiation to a specific whitelist of fields.
 
         Args:
-            data: Raw input dictionary before Pydantic model validation.
+            data: Raw input dictionary before Pydantic validation.
 
         Returns:
-            The sanitized input dictionary without the 'id' key.
+            The original data if it only contains allowed keys.
+
+        Raises:
+            ValueError: If a field outside the whitelist is provided.
         """
-        if isinstance(data, dict) and "id" in data:
-            data.pop("id")
+        if isinstance(data, dict):
+            provided = set(data.keys())
+            forbidden = provided - cls.WHITELIST
+
+            if forbidden:
+                raise PydanticCustomError(
+                    "initialization_error",
+                    "Forbidden fields at instantiation: {forbidden}. "
+                    "Allowed: {allowed}",
+                    {
+                        "forbidden": list(forbidden),
+                        "allowed": list(cls.WHITELIST),
+                    },
+                )
         return data

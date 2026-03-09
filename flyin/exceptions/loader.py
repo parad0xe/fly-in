@@ -62,5 +62,11 @@ class LoaderValidationError(LoaderError):
 
         messages.append("")
         for error in e.errors():
-            messages.append(f"- (field: '{error['loc'][0]}') {error['msg']}")
+            location = (
+                " -> ".join(str(loc) for loc in error["loc"])
+                if error["loc"] else "model"
+            )
+
+            messages.append(f"- ({location}) {error['msg']}")
+
         super().__init__("\n".join(messages))

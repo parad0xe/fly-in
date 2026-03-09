@@ -2,9 +2,10 @@ from __future__ import annotations
 
 from collections import Counter
 from enum import Enum
-from typing import Any
+from typing import Any, ClassVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic_core import PydanticCustomError
 from typing_extensions import Self
 
 from flyin.exceptions.hub import (
@@ -45,9 +46,17 @@ class Hub(BaseModel):
         color: Optional visual identifier.
         drones: Current number of drones stationed.
         max_drones: Maximum drone capacity.
-        is_leaf: True if the hub has one or fewer connections.
         connections: List of peer hubs and their associated links.
     """
+
+    WHITELIST: ClassVar[set[str]] = {
+        "name",
+        "x",
+        "y",
+        "zone",
+        "color",
+        "max_drones",
+    }
 
     model_config = ConfigDict(extra="forbid")
 
@@ -57,12 +66,14 @@ class Hub(BaseModel):
 
     zone: HubZoneType = HubZoneType.NORMAL
     color: str = "gray"
-    drones: int = Field(default=0, ge=0)
+    drones: int = Field(default=0, ge=0, init=False)
     max_drones: int = Field(default=1, ge=0)
 
-    is_dummy: bool = False
+    is_dummy: bool = Field(default=False, init=False)
 
-    connections: list[tuple[Hub, Link]] = Field(default_factory=lambda: [])
+    connections: list[tuple[Hub, Link]] = Field(
+        default_factory=lambda: [], init=False
+    )
 
     def __hash__(self) -> int:
         return hash((self.x, self.y, self.name))
@@ -81,6 +92,37 @@ class Hub(BaseModel):
         if self.y != other.y:
             return self.y < other.y
         return self.name < other.name
+
+    @model_validator(mode="before")
+    @classmethod
+    def force_whitelist_init(cls, data: Any) -> Any:
+        """
+        Restricts instantiation to a specific whitelist of fields.
+
+        Args:
+            data: Raw input dictionary before Pydantic validation.
+
+        Returns:
+            The original data if it only contains allowed keys.
+
+        Raises:
+            ValueError: If a field outside the whitelist is provided.
+        """
+        if isinstance(data, dict):
+            provided = set(data.keys())
+            forbidden = provided - cls.WHITELIST
+
+            if forbidden:
+                raise PydanticCustomError(
+                    "initialization_error",
+                    "Forbidden fields at instantiation: {forbidden}. "
+                    "Allowed: {allowed}",
+                    {
+                        "forbidden": list(forbidden),
+                        "allowed": list(cls.WHITELIST),
+                    },
+                )
+        return data
 
     def model_post_init(self, context: Any) -> None:
         """Execute integrity checks after model initialization."""
