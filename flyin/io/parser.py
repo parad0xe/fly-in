@@ -36,7 +36,9 @@ class GraphParser:
     META_SEP = "="
 
     HUB_PATTERN = re.compile(
-        r"^\s*([a-z][\w]*)\s*(-?\d+)\s*(-?\d+)\s*(?:\[\s*([^\[\]]*)\s*\])?\s*$",
+        r"^"
+        r"\s*([a-z][\w]*)\s*(-?\d+)\s*(-?\d+)\s*(?:\[\s*([^\[\]]*)\s*\])?\s*"
+        r"$",
         re.I,
     )
     CONNECTION_PATTERN = re.compile(
@@ -196,8 +198,8 @@ class GraphParser:
 
         self.hubs[hub_dummy.name] = hub_dummy
 
-        link_1 = Link(**link.model_dump(exclude={"id"}))
-        link_2 = Link(**link.model_dump(exclude={"id"}))
+        link_1 = Link(**link.model_dump(include=Link.WHITELIST))
+        link_2 = Link(**link.model_dump(include=Link.WHITELIST))
 
         source.connect_to(hub_dummy, link_1)
         hub_dummy.connect_to(target, link_2)

@@ -33,6 +33,6 @@ def test_link_accepts_valid_capacities(capacity):
 
 def test_link_coerces_strings_to_integers():
     """Verify that Pydantic converts numeric strings to integers."""
-    link = Link(drones="5", max_link_capacity="10")  # type: ignore
+    link = Link(max_link_capacity="10")  # type: ignore
     assert isinstance(link.drones, int)
     assert link.max_link_capacity == 10
