@@ -67,7 +67,7 @@ class GraphWindow(QMainWindow):
         Initializes the visualizer.
         """
         if not self.solution:
-            UIBus.get().info.emit("No solution founded")
+            UIBus.get().info.emit("No solution was found")
         else:
             untracked: set[int] = set()
 
@@ -125,10 +125,17 @@ class GraphWindow(QMainWindow):
         Args:
             event: Qt key event containing the pressed key info.
         """
-        if event is None or not self.solution:
+        if event is None:
             return super().keyPressEvent(event)
 
         key = event.key()
+
+        if key == Qt.Key.Key_Q:
+            self.close()
+            return
+
+        if not self.solution:
+            return super().keyPressEvent(event)
 
         if key == Qt.Key.Key_D:
             self._update_state(self.solution_index + 1)
@@ -137,8 +144,6 @@ class GraphWindow(QMainWindow):
         elif key == Qt.Key.Key_R:
             self.timer.stop()
             self._update_state(0)
-        elif key == Qt.Key.Key_Q:
-            self.close()
         elif key == Qt.Key.Key_Space:
             if self.timer.isActive():
                 self.timer.stop()

@@ -228,6 +228,11 @@ class GraphParser:
         if hub_type == "start" and self.nb_drones is not None:
             hub.drones = self.nb_drones
 
+        if hub_type == "start" and hub.zone == HubZoneType.BLOCKED:
+            raise ParserError(
+                lineno, "The start hub cannot be marked as blocked."
+            )
+
         if hub_type in ["start", "end"]:
             if self.nb_drones is not None and hub.max_drones < self.nb_drones:
                 raise ParserHubInsufficientCapacityError(lineno)
