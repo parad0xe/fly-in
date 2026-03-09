@@ -10,3 +10,14 @@ class GraphError(FlyInError):
     """
 
     default_message = "An unspecified graph error occurred."
+
+
+class GraphHubNotFoundError(GraphError):
+    """
+    Raised when a specific hub cannot be located within the graph.
+
+    Attributes:
+        default_message: Fallback message used when no message is provided.
+    """
+
+    default_message = "The specified hub was not found within the graph."
