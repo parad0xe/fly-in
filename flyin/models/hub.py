@@ -60,9 +60,27 @@ class Hub(BaseModel):
     drones: int = Field(default=0, ge=0)
     max_drones: int = Field(default=1, ge=0)
 
-    is_leaf: bool = True
+    is_dummy: bool = False
 
     connections: list[tuple[Hub, Link]] = Field(default_factory=lambda: [])
+
+    def __hash__(self) -> int:
+        return hash((self.x, self.y, self.name))
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Hub):
+            return (
+                self.x == other.x and self.y == other.y and
+                self.name == other.name
+            )
+        return False
+
+    def __lt__(self, other: Hub) -> bool:
+        if self.x != other.x:
+            return self.x < other.x
+        if self.y != other.y:
+            return self.y < other.y
+        return self.name < other.name
 
     def model_post_init(self, context: Any) -> None:
         """Execute integrity checks after model initialization."""
@@ -98,11 +116,6 @@ class Hub(BaseModel):
 
         if self.drones > self.max_drones:
             raise HubInsufficientCapacityError()
-
-        if len(self.connections) > 1:
-            self.is_leaf = False
-        else:
-            self.is_leaf = True
 
         return self
 

@@ -1,9 +1,9 @@
-from itertools import count
+import itertools
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-_id_counter = count(1)
+_id_counter = itertools.count(1)
 
 
 class Link(BaseModel):
@@ -24,6 +24,15 @@ class Link(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def prevent_id_injection(cls, data: Any) -> Any:
+        """
+        Removes 'id' from input data to ensure auto-generation is used.
+
+        Args:
+            data: Raw input dictionary before Pydantic model validation.
+
+        Returns:
+            The sanitized input dictionary without the 'id' key.
+        """
         if isinstance(data, dict) and "id" in data:
             data.pop("id")
         return data

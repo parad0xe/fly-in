@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import re
 from typing import Any, Callable, Iterable
 
@@ -10,7 +11,7 @@ from flyin.exceptions.parser import (
     ParserMissingSeparatorError,
     ParserUnhandledKeyError,
 )
-from flyin.models.hub import Hub
+from flyin.models.hub import Hub, HubZoneType
 from flyin.models.link import Link
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -120,19 +121,76 @@ class GraphParser:
 
     def _handle_connection(self, lineno: int, data: str) -> None:
         """
-        Handles hub connection logic and updates hub adjacency.
+        Parses and establishes a connection between two hubs in the graph.
 
         Args:
-            lineno: Current line number for error reporting.
-            data: Raw string representing the connection and metadata.
+            lineno: Current line number for error reporting and debugging.
+            data: Raw string with connection details, hubs, and metadata.
         """
         hub_a, hub_b, link = self._parse_connection(lineno, data)
-        hub_a.connect_both(hub_b, link)
-        self.links.append(link)
+
+        self._add_directional_connection(source=hub_b, target=hub_a, link=link)
+        self._add_directional_connection(source=hub_a, target=hub_b, link=link)
+
+        if (hub_a.zone != HubZoneType.RESTRICTED or
+                hub_b.zone != HubZoneType.RESTRICTED):
+            self.links.append(link)
+
         logger.debug(
             f"Connected hubs: '{hub_a.name}' <-> '{hub_b.name}' "
             f"(capacity: {link.max_link_capacity})"
         )
+
+    def _add_directional_connection(
+        self, source: Hub, target: Hub, link: Link
+    ) -> None:
+        """
+        Connects source to target, handling restricted zone dummy hubs.
+
+        Args:
+            source: Origin Hub object initiating the directional connection.
+            target: Destination Hub object, triggering dummies if restricted.
+            link: Link model with metadata and capacity constraints.
+        """
+        if target.zone != HubZoneType.RESTRICTED:
+            source.connect_to(target, link)
+            return
+
+        dx = source.x - target.x
+        dy = source.y - target.y
+        length = math.hypot(dx, dy)
+        offset = 0.35
+
+        vx = (
+            target.x +
+            (dx / length) * offset if length > 0 else float(target.x)
+        )
+        vy = (
+            target.y +
+            (dy / length) * offset if length > 0 else float(target.y)
+        )
+
+        hub_dummy = target.model_copy(
+            update={
+                "name": f"{source.name}_{target.name}_dummy",
+                "x": vx,
+                "y": vy,
+                "is_dummy": True,
+                "is_leaf": False,
+                "connections": [],
+            },
+            deep=True,
+        )
+
+        self.hubs[hub_dummy.name] = hub_dummy
+
+        link_1 = Link(**link.model_dump(exclude={"id"}))
+        link_2 = Link(**link.model_dump(exclude={"id"}))
+
+        source.connect_to(hub_dummy, link_1)
+        hub_dummy.connect_to(target, link_2)
+
+        self.links.extend([link_1, link_2])
 
     def _handle_hub(self, lineno: int, data: str, hub_type: str) -> None:
         """
@@ -267,6 +325,7 @@ class GraphParser:
             A dictionary structured for Graph model instantiation.
         """
         return {
+            "nb_drones": self.nb_drones,
             "hubs": list(self.hubs.values()),
             "links": self.links,
             "start_hub": self.start_hub,

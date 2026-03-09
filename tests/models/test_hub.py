@@ -23,7 +23,7 @@ def test_hub_initializes_with_default_values(valid_hub_data):
     assert hub.drones == 0
     assert hub.max_drones == 1
     assert hub.connections == []
-    assert hub.is_leaf is True
+    assert hub.is_dummy is False
 
 
 def test_hub_prevents_extra_fields(valid_hub_data):
@@ -148,31 +148,6 @@ def test_hub_connect_both_prevents_duplicates(valid_hub_data):
 
     with pytest.raises(HubDuplicateLinkError):
         hub_b.connect_both(hub_a, link)
-
-
-def test_hub_updates_leaf_status(valid_hub_data):
-    """Verify is_leaf becomes False when more than one connections exist."""
-    hub = Hub(**valid_hub_data)
-    assert hub.is_leaf is True
-
-    hubs = [Hub(name=f"Hub{i}", x=i, y=i) for i in range(3)]
-
-    hub.connect_to(hubs[0], Link())
-    assert hub.is_leaf is True
-    assert hubs[0].is_leaf is True
-
-    hub.connect_to(hubs[1], Link())
-    assert hub.is_leaf is False
-    assert hubs[0].is_leaf is True
-    assert hubs[1].is_leaf is True
-
-    hubs[0].connect_both(hubs[2], Link())
-    assert hubs[0].is_leaf is True
-    assert hubs[2].is_leaf is True
-
-    hubs[0].connect_to(hubs[1], Link())
-    assert hubs[0].is_leaf is False
-    assert hubs[1].is_leaf is True
 
 
 def test_hub_automatically_converts_numeric_strings(valid_hub_data):

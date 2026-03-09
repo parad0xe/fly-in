@@ -39,6 +39,7 @@ def graph_factory() -> CallableGraphFactoryReturn:
         links: list[Link] | None = None,
     ) -> Graph:
         return Graph(
+            nb_drones=10,
             hubs=custom_hubs,
             links=links or [],
             start_hub=start_hub,

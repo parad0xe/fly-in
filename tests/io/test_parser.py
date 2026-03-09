@@ -20,8 +20,8 @@ def test_parser_handles_valid_input(parser):
     lines = [
         "nb_drones: 10",
         "start_hub: Alpha 0 0",
+        "hub: Gamma -5 5 [zone=restricted]",
         "end_hub: Beta 10 10 [color=ReD]",
-        "hub: Gamma -5 5",
         "connection: Alpha-Gamma [max_link_capacity=5]",
         "connection: Gamma-Beta",
     ]
@@ -30,13 +30,20 @@ def test_parser_handles_valid_input(parser):
     assert result["start_hub"].name == "Alpha"
     assert result["start_hub"].drones == 10
     assert result["end_hub"].color == "red"
-    assert len(result["hubs"]) == 3
-    assert len(result["links"]) == 2
+    assert len(result["hubs"]) == 5
+    assert len(result["links"]) == 6
 
-    assert result["links"][0].max_link_capacity == 5
-    assert len(result["hubs"][0].connections) == 1
-    assert len(result["hubs"][1].connections) == 1
-    assert len(result["hubs"][2].connections) == 2
+    assert result["links"][0].max_link_capacity == 5  # Alpha -> Dummy
+    assert result["links"][1].max_link_capacity == 5  # Dummy -> Gamma
+    assert result["links"][2].max_link_capacity == 5  # Gamma -> Alpha
+
+    print([(h.name) for h in result["hubs"]])
+    assert len(result["hubs"][0].connections) == 1  # Alpha
+    assert len(result["hubs"][1].connections) == 2  # Gamma
+    assert len(result["hubs"][3].connections) == 1  # Dummy
+
+    assert result["hubs"][3].is_dummy is True
+    assert result["hubs"][4].is_dummy is True
 
 
 def test_parser_enforces_nb_drones_precedence(parser):

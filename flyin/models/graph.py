@@ -2,6 +2,7 @@ from typing import Iterator
 
 from pydantic import BaseModel, ConfigDict
 
+from flyin.exceptions.graph import GraphHubNotFoundError
 from flyin.models.hub import Hub
 from flyin.models.link import Link
 
@@ -19,10 +20,29 @@ class Graph(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
+    nb_drones: int
     hubs: list[Hub]
     links: list[Link]
     start_hub: Hub
     end_hub: Hub
+
+    def get(self, hub: Hub) -> list[tuple[Hub, Link]]:
+        """
+        Retrieves all outgoing connections for a specific hub in the graph.
+
+        Args:
+            hub: The Hub instance to search for within the graph.
+
+        Returns:
+            A list of tuples pairing connected hubs with their links.
+
+        Raises:
+            GraphHubNotFoundError: If the requested hub is not in the graph.
+        """
+        if hub in self.hubs:
+            hub_index = self.hubs.index(hub)
+            return self.hubs[hub_index].connections
+        raise GraphHubNotFoundError()
 
     def iter_unique_connections(self) -> Iterator[tuple[Hub, Hub, Link]]:
         """
