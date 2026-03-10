@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import itertools
 from collections import Counter
 from enum import Enum
 from typing import Any, ClassVar
@@ -35,6 +36,9 @@ class HubMetadataType(str, Enum):
     MAX_DRONE = "max_drone"
 
 
+_id_counter = itertools.count(1)
+
+
 class Hub(BaseModel):
     """Represent a spatial network node with operational constraints.
 
@@ -60,6 +64,7 @@ class Hub(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    uid: int = Field(default_factory=lambda: next(_id_counter), frozen=True)
     name: str = Field(min_length=1, pattern=r"^[a-zA-Z]\w*$")
     x: int
     y: int
@@ -74,14 +79,11 @@ class Hub(BaseModel):
     connections: list[tuple[Hub, Link]] = Field(default_factory=lambda: [])
 
     def __hash__(self) -> int:
-        return hash((self.x, self.y, self.name))
+        return self.uid
 
-    def __eq__(self, other: object) -> bool:
-        if isinstance(other, Hub):
-            return (
-                self.x == other.x and self.y == other.y and
-                self.name == other.name
-            )
+    def __eq__(self, other: Any) -> bool:
+        if type(other) is type(self):
+            return bool(self.name == other.name)
         return False
 
     def __lt__(self, other: Hub) -> bool:

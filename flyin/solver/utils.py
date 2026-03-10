@@ -61,8 +61,6 @@ class HighLevelNode:
     parent: Optional[HighLevelNode] = None
     neighbors: deque[HighLevelNode] = field(default_factory=lambda: deque())
 
-    failed_agent: Optional[int] = None
-
     def __lt__(self, other: HighLevelNode) -> bool:
         """Comparison for priority queue based on f and h values."""
         if self.f != other.f:
@@ -76,32 +74,23 @@ class HighLevelNode:
         self.h = Utils.get_h(self.distance, self.config)
         self.f = self.g + self.h
 
-    def next_lazy_constraints(self) -> Optional[LowLevelNode]:
+    def next_lazy_constraints(
+        self,
+        low_level_node: LowLevelNode,
+        agent_index: Optional[int] = None,
+    ) -> None:
         """
         Generate the next set of constraints for exploration.
 
-        Returns:
-            The next LowLevelNode to process, or None if exhausted.
         """
-        if not self.tree:
-            return None
-
-        low_level_node = self.tree.popleft()
-
-        agent_index: Optional[int] = None
-
-        if (self.failed_agent is not None and
-                self.failed_agent not in low_level_node.constraints):
-            agent_index = self.failed_agent
-            self.failed_agent = None
-        else:
+        if agent_index is None:
             for ak in range(len(self.config)):
                 if ak not in low_level_node.constraints:
                     agent_index = ak
                     break
 
         if agent_index is None:
-            return low_level_node
+            return
 
         moves = Utils.get_moves(
             self.graph,
@@ -109,12 +98,10 @@ class HighLevelNode:
             agent_index,
             self.config[agent_index],
         )
-        for move in moves:
+        for move in reversed(moves):
             current_constraints = low_level_node.constraints.copy()
             current_constraints[agent_index] = move
             self.tree.append(LowLevelNode(current_constraints))
-
-        return low_level_node
 
     def backtrace(self) -> list[Config]:
         """

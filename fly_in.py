@@ -6,6 +6,7 @@ from flyin.arguments import Args
 from flyin.exceptions.base import FlyInError
 from flyin.io.file_loader import GraphFileLoader
 from flyin.logging import LoggingSystem
+from flyin.models.hub import Hub
 from flyin.solver.lacam import Lacam
 from flyin.ui.window import GraphWindow
 
@@ -26,13 +27,30 @@ def main() -> None:
         logger.exception(e)
         exit(2)
 
-    config_start = (graph.start_hub,) * graph.nb_drones
-    config_end = (graph.end_hub,) * graph.nb_drones
+    is_special_case = args.file.endswith("00_custom-tunnel.txt")
+
+    if is_special_case:
+        config_start: tuple[Hub, ...] = (
+            graph.hubs[5],
+            graph.hubs[4],
+            graph.hubs[3],
+            graph.hubs[1],
+        )
+        config_end: tuple[Hub, ...] = (
+            graph.hubs[2],
+            graph.hubs[3],
+            graph.hubs[4],
+            graph.hubs[5],
+        )
+    else:
+        config_start = (graph.start_hub,) * graph.nb_drones
+        config_end = (graph.end_hub,) * graph.nb_drones
 
     solution = Lacam.solve(
         graph=graph,
         config_start=config_start,
         config_end=config_end,
+        max_duration=5000 if is_special_case else 400,
     )
 
     app = QApplication([])
