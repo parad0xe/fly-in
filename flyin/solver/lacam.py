@@ -29,6 +29,7 @@ class Lacam:
         graph: Graph,
         config_start: Config,
         config_end: Config,
+        max_duration: int = 5000,
     ) -> Optional[list[Config]]:
         """
         Initialize and run the LaCAM solver on the given graph.
@@ -45,6 +46,7 @@ class Lacam:
             graph=graph,
             config_start=config_start,
             config_end=config_end,
+            max_duration=max_duration,
         )
 
         return lacam.compute()
@@ -54,6 +56,7 @@ class Lacam:
         graph: Graph,
         config_start: Config,
         config_end: Config,
+        max_duration: int = 5000,
     ) -> None:
         """
         Initialize the LaCAM algorithm state and precompute heuristics.
@@ -79,16 +82,18 @@ class Lacam:
             config_start=config_start,
             config_end=config_end,
         )
+        self.max_duration: int = max_duration
 
-    def get_edge_cost(self, config_from: Config) -> float:
+    def get_edge_cost(self, config_from: Config, _: Config) -> float:
         """
-        Compute the transition cost from a given configuration.
+        Compute the transition cost from a given configuration to another.
 
         Args:
             config_from: The source configuration.
+            config_to: The destination configuration.
 
         Returns:
-            The numerical cost of transitioning (1.0 or 0.0).
+            The numerical cost of transitioning.
         """
         if config_from == self.config_end:
             return 0.0
@@ -121,10 +126,7 @@ class Lacam:
         def _get_elapsed() -> float:
             return (time.time() - start_time) * 1000
 
-        def _get_signature(config: Config) -> Config:
-            return config
-
-        while (len(opens) > 0) and _get_elapsed() < 400:
+        while (len(opens) > 0) and _get_elapsed() < self.max_duration:
             high_level_node = heapq.heappop(opens)
 
             if high_level_node.config == self.config_end:
@@ -143,48 +145,46 @@ class Lacam:
             if solution is not None and solution.g < high_level_node.f:
                 continue
 
-            low_level_node = high_level_node.next_lazy_constraints()
-            if low_level_node is None:
-                continue
+            low_level_node = high_level_node.tree.pop()
 
-            config_new, failed_agent = Pibt.run(
+            config_new = Pibt.run(
                 self.graph,
                 self.distance,
                 high_level_node,
                 low_level_node,
             )
 
-            # no valid movement found for this branch
             if not config_new:
-                high_level_node.failed_agent = failed_agent
                 heapq.heappush(opens, high_level_node)
                 continue
 
+            high_level_node.next_lazy_constraints(low_level_node)
             heapq.heappush(opens, high_level_node)
 
-            if _get_signature(config_new) in explored:
-                # backward djikstra for update node weight if necessary
-                high_level_node_to = explored[_get_signature(config_new)]
-                high_level_node.neighbors.append(high_level_node_to)
+            if config_new in explored:
+                high_level_node_to = explored[config_new]
 
-                # update weight
+                if high_level_node_to not in high_level_node.neighbors:
+                    high_level_node.neighbors.append(high_level_node_to)
+
                 new_g_for_to = high_level_node.g + self.get_edge_cost(
-                    high_level_node.config
+                    high_level_node.config, high_level_node_to.config
                 )
 
                 if new_g_for_to < high_level_node_to.g:
                     high_level_node_to.g = new_g_for_to
                     high_level_node_to.f = new_g_for_to + high_level_node_to.h
                     high_level_node_to.parent = high_level_node
-                    heapq.heappush(opens, high_level_node_to)
 
                     update: deque[HighLevelNode] = deque([high_level_node_to])
+
                     while len(update) > 0:
                         high_level_node_from = update.popleft()
                         for n_neighbor in high_level_node_from.neighbors:
                             new_g = (
                                 high_level_node_from.g + self.get_edge_cost(
-                                    high_level_node_from.config
+                                    high_level_node_from.config,
+                                    n_neighbor.config,
                                 )
                             )
                             if new_g < n_neighbor.g:
@@ -192,10 +192,10 @@ class Lacam:
                                 n_neighbor.f = new_g + n_neighbor.h
                                 n_neighbor.parent = high_level_node_from
                                 update.append(n_neighbor)
-                                if (solution is None or
-                                        n_neighbor.f < solution.g):
-                                    heapq.heappush(opens, n_neighbor)
-                    continue
+
+                    heapq.heapify(opens)
+
+                continue
 
             high_level_node_new = HighLevelNode(
                 graph=self.graph,
@@ -205,10 +205,10 @@ class Lacam:
                 config_end=self.config_end,
                 parent=high_level_node,
                 g=high_level_node.g +
-                self.get_edge_cost(high_level_node.config),
+                self.get_edge_cost(high_level_node.config, config_new),
             )
             heapq.heappush(opens, high_level_node_new)
-            explored[_get_signature(config_new)] = high_level_node_new
+            explored[config_new] = high_level_node_new
             high_level_node.neighbors.append(high_level_node_new)
 
         if solution is not None:
