@@ -4,7 +4,9 @@ version = "0.0.1"
 
 [tool.poetry.dependencies]
 python = ">=3.10"
-python-dotenv = "1.2.1"
+pydantic = "2.12.5"
+typing-extensions = "4.15.0"
+PyQt6 = "6.10.2"
 
 [tool.poetry.group.dev]
 optional = true
@@ -12,9 +14,24 @@ optional = true
 [tool.poetry.group.dev.dependencies]
 mypy = "1.19.1"
 flake8 = "7.3.0"
+pytest = "9.0.2"
 
-[[tool.mypy.overrides]]
-ignore_missing_imports = true
+[tool.pytest]
+minversion = "9.0"
+addopts = ["-ra", "-q"]
+testpaths = [
+    "tests",
+]
+
+[tool.flake8]
+exclude = [
+	"tests"
+]
+
+[tool.mypy]
+exclude = [
+	"tests"
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

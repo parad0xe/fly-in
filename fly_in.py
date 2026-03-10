@@ -1,59 +1,44 @@
-import argparse
 import logging
-import logging.config
-import os
 
-from dotenv import load_dotenv
+from PyQt6.QtWidgets import QApplication
 
-load_dotenv()
-
-env = os.getenv("ENV", "").lower()
+from flyin.arguments import Args
+from flyin.exceptions.base import FlyInError
+from flyin.io.file_loader import GraphFileLoader
+from flyin.logging import LoggingSystem
+from flyin.solver.lacam import Lacam
+from flyin.ui.window import GraphWindow
 
 logger: logging.Logger = logging.getLogger(__name__)
-log_level: int = logging.INFO if env == "production" else logging.DEBUG
-
-LOGGING_CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "standard": {
-            "format": (
-                "%(asctime)s [%(levelname)s] %(name)s "
-                "(%(filename)s:%(lineno)d): %(message)s"
-            ),
-            "datefmt": "%H:%M:%S",
-        },
-    },
-    "handlers": {
-        "console": {
-            "level": log_level,
-            "class": "logging.StreamHandler",
-            "formatter": "standard",
-        },
-    },
-    "loggers": {
-        "": {
-            "handlers": ["console"],
-            "level": log_level,
-        },
-    },
-}
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(
-        prog="FlyIn",
-        description="Design a system that efficiently routes a fleet of \
-                drones from a central base (start) to a target location (end)",
-        epilog="created by nlallema",
+    args = Args.parse_arguments()
+
+    LoggingSystem.global_setup(args)
+
+    try:
+        graph = GraphFileLoader.load(args.file)
+    except FlyInError as e:
+        logger.exception(e)
+        exit(1)
+    except Exception as e:
+        logger.exception(e)
+        exit(2)
+
+    config_start = (graph.start_hub,) * graph.nb_drones
+    config_end = (graph.end_hub,) * graph.nb_drones
+
+    solution = Lacam.solve(
+        graph=graph,
+        config_start=config_start,
+        config_end=config_end,
     )
 
-    args = parser.parse_args()
-    print(args)
-
-    logging.config.dictConfig(LOGGING_CONFIG)
-
-    logger.debug("Initial debug")
+    app = QApplication([])
+    window = GraphWindow(graph, solution)
+    window.show()
+    app.exec()
 
 
 if __name__ == "__main__":
