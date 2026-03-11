@@ -193,6 +193,8 @@ class GraphParser:
                 "is_leaf": False,
                 "connections": [],
                 "max_drones": link.max_link_capacity,
+                "zone": HubZoneType.NORMAL,
+                "drones": 0,
             },
         )
 
