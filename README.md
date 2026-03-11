@@ -102,6 +102,7 @@ As per the project guidelines, AI tools were utilized during the development of 
 - **Documentation:** Generating and refining the project's documentation and README.md.  
 - **Testing:** Assisting in the generation of test cases to ensure code reliability and handle edge cases.  
 - **Research & Comprehension:** Breaking down and explaining complex concepts from research papers related to the LaCAM and PIBT algorithms.
+- **Debugging & Problem Solving:** Assisting in identifying bugs, understanding deadlocks or impasses in the code, and suggesting potential fixes or refactoring strategies.
 
 ### Qt / PyQt
 
